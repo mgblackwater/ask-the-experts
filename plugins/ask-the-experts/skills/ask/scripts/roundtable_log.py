@@ -161,7 +161,7 @@ def main():
                     parts.insert(max(0, len(parts) - 1), p)  # keep the user last
             elif kind == "meta":
                 for k in ("topic", "title", "aim"):
-                    if obj.get(k):
+                    if obj.get(k) and not (k == "title" and data.get("titleByUser")):  # the user's own name stays
                         data[k] = obj[k]
             else:
                 if kind == "turn" and obj.get("who") not in {x.get("id") for x in parts}:

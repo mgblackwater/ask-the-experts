@@ -21,6 +21,8 @@ script says so and exits 0 instead of starting a second one; it never stops a ru
   POST /api/persona           ask Claude to build a persona: {name, kind: "public" | "custom", description, files:[{name, data}]}.
                               public = research a well-known figure's public record; custom = from your material only
   POST /api/archive           {transcript, archived: true | false}; archived chats leave the main list
+  POST /api/rename            {transcript, title}; the user's own name for a chat, kept when people join.
+                              An empty title goes back to the automatic one (the people's names).
   POST /api/add               add people to a chat: {transcript, people:[slug]}; a direct chat becomes a group
   POST /api/say               {transcript, text, replyTo, to:[participant id | "ai"], files:[{name, data (base64)}]}  (to = the people tagged with @).
                               Writing in a finished chat picks it up again (the event has "reopened": true)
@@ -333,7 +335,8 @@ class App(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         route = self.path.split("?")[0]
         handlers = {"/api/new": self.post_new, "/api/add": self.post_add, "/api/persona": self.post_persona,
-                    "/api/archive": self.post_archive, "/api/say": self.post_say, "/api/edit": self.post_edit,
+                    "/api/archive": self.post_archive, "/api/rename": self.post_rename,
+                    "/api/say": self.post_say, "/api/edit": self.post_edit,
                     "/api/answer": self.post_answer, "/api/control": self.post_control}
         if route not in handlers:
             return self._json(404, {"error": "not found"})
@@ -405,6 +408,25 @@ class App(http.server.SimpleHTTPRequestHandler):
         locked_update(path, mark)
         return self._json(200, {"ok": True, "archived": archived})
 
+    def post_rename(self, req):
+        name, path = self._transcript(req)
+        title = " ".join(str(req.get("title") or "").split())[:80]
+        result = {}
+
+        def rename(data):
+            if title:
+                data["title"], data["titleByUser"] = title, True
+            else:                       # back to the automatic name: the people at the table
+                data.pop("titleByUser", None)
+                seated = [p.get("name", "") for p in data.get("participants", []) if p.get("kind") in ("thinker", "self")]
+                data["title"] = (seated[0] if len(seated) == 1 else ", ".join(n.split()[-1] for n in seated if n)) \
+                    or data.get("title") or "Chat"
+            result["title"] = data["title"]
+            return None
+
+        locked_update(path, rename)
+        return self._json(200, {"ok": True, "title": result["title"]})
+
     def post_persona(self, req):
         """Ask the moderator to build a custom persona from a description and/or documents.
         Sources are kept in the private folder (next to personas/), never in the logs folder."""
@@ -456,7 +478,8 @@ class App(http.server.SimpleHTTPRequestHandler):
             if was == "direct":
                 data["mode"] = "group"
                 data["topic"] = "Group chat with " + ", ".join(seated)
-                data["title"] = ", ".join(n.split()[-1] for n in seated)
+                if not data.get("titleByUser"):     # a name the user gave the chat stays
+                    data["title"] = ", ".join(n.split()[-1] for n in seated)
             data.setdefault("items", []).append({"type": "moderator", "label": "Added",
                                                  "text": f"{user_name} added {', '.join(added)}.", "time": now_iso()})
             result.update(added=new, was=was)

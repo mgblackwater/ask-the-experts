@@ -236,6 +236,7 @@ Draw like a person at a whiteboard, not a designer: 3–10 boxes, circles or arr
 }
 ```
 
+- `titleByUser: true` means the user named the chat themselves (tap the name in the header). Keep their name: `roundtable_log.py` ignores a `meta` title then, and adding people no longer renames the chat.
 - `archived: true` hides a chat from the main list (the user's Archive button). Nothing is deleted, and writing in the chat clears it. You don't need to act on it.
 - Item types: `round`, `turn`, `user` (may carry `to` and `replyTo`), `moderator`, `evidence`, and `ai` (an AI research answer, with `sources` and `replyTo`). `roundtable_log.py` stamps each item with `time`, and the page shows it.
 - `kind`: `thinker` (colour-coded), `self` (the user's persona), `user`, `moderator`, `researcher`. `avatar` is a dossier slug; pictures come from `<skill>/assets/avatars/` or the user's private `~/.claude/ask-the-experts/avatars/`, and initials are shown if there's none.
