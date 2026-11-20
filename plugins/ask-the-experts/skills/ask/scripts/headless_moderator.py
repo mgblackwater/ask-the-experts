@@ -164,6 +164,19 @@ def run_claude(logs_dir, state, key, events, dry_run):
     return True
 
 
+def sync_home(logs_dir, key, events):
+    """Commit (and, with git-sync on the host, push) the home folder after a run."""
+    cfg = load_json(CONFIG, {})
+    if cfg.get("chat_history") not in ("git", "git-sync") or cfg.get("sync_role", "host") != "host":
+        return
+    kinds = sorted({e.get("kind", "?") for e in events})
+    msg = f"{'Persona' if key == '_persona' else key.replace('.json', '')}: {', '.join(kinds)}"
+    script = pathlib.Path(__file__).resolve().parent / "home_sync.py"
+    r = subprocess.run([sys.executable, "-I", str(script), "commit", msg], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
+    log(logs_dir, f"sync: {(r.stdout or r.stderr).strip().splitlines()[-1] if (r.stdout or r.stderr).strip() else 'ok'}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--once", action="store_true")
@@ -193,6 +206,8 @@ def main():
             events = pending.pop(key)
             if run_claude(logs_dir, state, key, events, args.dry_run):
                 retry.pop(key, None)
+                if not args.dry_run:
+                    sync_home(logs_dir, key, events)
             else:
                 attempts = retry.get(key, (0, 0))[0]
                 if attempts < len(RETRY_DELAYS):

@@ -25,7 +25,12 @@ Read `~/.claude/ask-the-experts/config.json`. If it doesn't exist, run **Setup**
 4. **"Check the living thinkers' dossiers for news now?"** Header `Freshness`. Options: "Yes, refresh ones older than 3 months (Recommended)" and "Not now".
 
 Then a second call (also asked when an existing config lacks these keys):
-5. **"Keep a history with git?"** Header `History`. Options: "Yes, local only (Recommended)" and "No". If yes, run `git init` in the home folder if it isn't a repo already, write a `.gitignore` with `chats/.ask-the-experts-inbox.jsonl` and `chats/.briefs/`, and commit what's there now. Never add a remote or push.
+5. **"Keep a history with git?"** Header `History`. Options:
+   - "Yes, local only (Recommended)": run `python3 -I <skill>/scripts/home_sync.py commit "Ask the Experts home"`.
+   - "Yes, and sync through a private GitHub repo": for a backup, or to share chats with another machine such as an always-on host. Confirm a repo name (default `ask-the-experts-home`), create it **private** with `gh repo create <owner>/<name> --private`, then run `home_sync.py init https://github.com/<owner>/<name>.git`. That sets `chat_history: git-sync` and `sync_role: host`, and pushes. Say plainly that chats and personas will be stored in that private repo, and that persona source documents stay local.
+   - "No".
+
+   `home_sync.py` writes the `.gitignore`, which keeps runtime files and persona sources out, and commits.
 6. **"What should the host be called in the chat?"** Header `Host`. Options: "Claude (Recommended)" and anything the user types.
 
 Then write the config:
@@ -33,10 +38,11 @@ Then write the config:
 ```json
 {"user_name": "<name>", "home_dir": "<home>", "logs_dir": "<home>/chats", "private_personas_dir": "<home>/personas",
  "port": 8766, "refresh_after_days": 90, "remind_every_days": 30, "last_freshness_check": "<today>",
- "host_name": "Claude", "chat_history": "git" | "none"}
+ "host_name": "Claude", "chat_history": "git" | "git-sync" | "none",
+ "sync_remote": "<private repo URL, with git-sync>", "sync_role": "host" | "copy"}
 ```
 
-When `chat_history` is `git`, commit the home folder after a chat finishes and after a persona is built or changed: `git -C <home> add -A && git -C <home> commit -m "<what changed>"`. Skip quietly if nothing changed. Never push.
+When `chat_history` is `git` or `git-sync`, run `python3 -I <skill>/scripts/home_sync.py commit "<what changed>"` after a chat finishes and after a persona is built or changed. With `git-sync` on the host it also pushes. Never push by any other route, and never push from a machine whose `sync_role` is `copy`. To bring another machine up to date: `home_sync.py pull` on a copy, or `home_sync.py clone <remote>` on a new one. On an always-on host, the moderator does the commit and push itself after every run.
 
 **Moving an existing setup to one home folder** (older configs have `logs_dir` and `private_personas_dir` in different places): offer it once. Move the chats into `<home>/chats/`, copy personas, avatars and sources into the home folder, check the copies match, and move the old folders to the Trash, not delete them. Update the config, restart the app, then commit if history is on. The config file itself stays at `~/.claude/ask-the-experts/config.json`, because that's where the plugin looks.
 
