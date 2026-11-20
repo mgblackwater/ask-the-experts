@@ -18,12 +18,12 @@ Run Ask the Experts on a PC that stays on, such as an Intel NUC or a home server
 ## Set up (Windows)
 
 1. On the PC, sign in to Claude Code as you, and install the plugin:
-   `claude plugin install ask-the-experts@blackwater-skills`
+   `claude plugin install ask-the-experts@ask-the-experts`
 2. Install Python 3 from python.org and tick "Add to PATH". Install Tailscale and sign in.
 3. Run the setup script once in PowerShell:
-   `powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.claude\plugins\cache\blackwater-skills\ask-the-experts\<version>\skills\ask\scripts\setup_windows.ps1"`
-   It uses your settings (or creates them), copies `host.py` into the home folder, registers two start-at-sign-in tasks ("Ask the Experts - App" and "Ask the Experts - Moderator"), starts them, and runs `tailscale serve`. It prints your address, for example `https://nuc.your-tailnet.ts.net/`.
-4. **Keep it available:** set Windows to sign in automatically (`netplwiz`, or Settings → Accounts → Sign-in options), and set Power → Sleep to **Never**. The tasks start at sign-in, because Claude Code needs your user profile.
+   `powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.claude\plugins\cache\ask-the-experts\ask-the-experts\<version>\skills\ask\scripts\setup_windows.ps1"`
+   It uses your settings (or creates them), copies `host.py` into the home folder, registers two start-at-sign-in tasks ("Ask the Experts - App" and "Ask the Experts - Moderator"), starts them, and runs `tailscale serve`. It shares the app on its own HTTPS port (8766), so anything else you already share on the tailnet address keeps working, and prints your address, for example `https://nuc.your-tailnet.ts.net:8766/`.
+4. **Keep it available:** set Windows to sign in automatically: in Settings → Accounts → Sign-in options, turn off "For improved security, only allow Windows Hello sign-in" (it hides the next option), then run `netplwiz` and untick "Users must enter a user name and password to use this computer", and set Power → Sleep to **Never**. The tasks start at sign-in, because Claude Code needs your user profile.
 
 On macOS or Linux, run the same two programs at login instead: `python3 -I <home>/host.py server` and `python3 -I <home>/host.py moderator` (launchd, systemd or a login item).
 
@@ -56,7 +56,7 @@ If you use git history in the home folder, commit on the host only. Use Syncthin
 
 ## Updates and troubleshooting
 
-- **Plugin update:** run `claude plugin update ask-the-experts@blackwater-skills`, then restart both tasks (Task Scheduler, or sign out and in). `host.py` always starts the newest installed version.
+- **Plugin update:** run `claude plugin update ask-the-experts@ask-the-experts`, then restart both tasks (Task Scheduler, or sign out and in). `host.py` always starts the newest installed version.
 - **Logs:** `chats\.moderator.log` shows each run and how it ended. If a chat seems stuck, look there first.
 - **Nothing answers on the phone:** check Tailscale is on, then `tailscale serve status` on the host, then open `http://127.0.0.1:8766/` on the host itself.
 - **Undo:** `Unregister-ScheduledTask -TaskName "Ask the Experts - App","Ask the Experts - Moderator" -Confirm:$false` and `tailscale serve reset`.

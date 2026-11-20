@@ -84,9 +84,9 @@ def save_json(path, data):
 
 def plugin_dir():
     """The newest installed ask-the-experts plugin version (survives plugin updates)."""
-    base = pathlib.Path.home() / ".claude" / "plugins" / "cache" / "blackwater-skills" / "ask-the-experts"
+    base = pathlib.Path.home() / ".claude" / "plugins" / "cache"  # <marketplace>/ask-the-experts/<version>
     here = pathlib.Path(__file__).resolve().parents[1]
-    versions = sorted((d for d in base.glob("*") if (d / "skills" / "ask" / "SKILL.md").is_file()),
+    versions = sorted((d for d in base.glob("*/ask-the-experts/*") if (d / "skills" / "ask" / "SKILL.md").is_file()),
                       key=lambda d: [int(x) if x.isdigit() else x for x in d.name.split(".")]) if base.is_dir() else []
     return versions[-1] / "skills" / "ask" if versions else here
 

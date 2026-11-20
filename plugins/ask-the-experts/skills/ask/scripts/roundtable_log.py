@@ -64,7 +64,8 @@ def main():
     if not argv:
         sys.exit(__doc__)
     path = pathlib.Path(argv[0])
-    raw = sys.stdin.read().strip() if not sys.stdin.isatty() else ""
+    # Read bytes and decode as UTF-8: on Windows sys.stdin uses the ANSI code page (cp1252).
+    raw = sys.stdin.buffer.read().decode("utf-8-sig").strip() if not sys.stdin.isatty() else ""
     new = json.loads(raw) if raw else []
     new = new if isinstance(new, list) else [new]
     with open(path, "r+", encoding="utf-8") as f:

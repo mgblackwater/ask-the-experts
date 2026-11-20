@@ -93,7 +93,9 @@ def main():
     args = sys.argv[1:]
     if args and args[0] in ("-h", "--help"):
         sys.exit(__doc__)
-    flags = check(sys.stdin.read(), args[0] if args else None)
+    # UTF-8 both ways: on Windows the console streams default to the ANSI code page (cp1252).
+    sys.stdout.reconfigure(encoding="utf-8")
+    flags = check(sys.stdin.buffer.read().decode("utf-8-sig"), args[0] if args else None)
     for f in flags:
         print("- " + f)
     sys.exit(1 if flags else 0)
