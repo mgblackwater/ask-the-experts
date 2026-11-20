@@ -52,11 +52,11 @@ body.served .back{display:block}
 .stack{display:flex;flex:none}
 .stack .av{width:34px;height:34px;margin-left:-12px;border:2px solid var(--head);font-size:.68rem}
 .stack .av:first-child{margin-left:0}
-.ttl{flex:1;min-width:0}
+.ttl{flex:1;min-width:min(120px,35vw)} /* the name stays readable; the buttons give way (and scroll) first */
 .ttl .name{font-weight:600;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ttl .sub{font-size:.8rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ttl .sub.typing-now{color:var(--accent)}
-.tools{display:flex;gap:4px;align-items:center;flex:none}
+.tools{display:flex;gap:4px;align-items:center;flex:0 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none} /* never wider than the screen */
 .tool{border:none;background:none;border-radius:8px;padding:6px 8px;font-size:.82rem;color:var(--sub)}
 .tool:hover{background:rgba(127,127,127,.12);color:var(--head-ink)}
 .tool[aria-pressed="true"]{color:var(--accent)}
@@ -83,6 +83,19 @@ body.interactive .ia{display:inline-block}
 .av img{width:100%;height:100%;display:block}
 .bubble{position:relative;max-width:min(560px,82%);min-width:120px;padding:6px 10px 6px 11px;border-radius:14px;background:var(--in);color:var(--in-ink);box-shadow:var(--shadow)}
 .msg.in .bubble{border-bottom-left-radius:4px}
+.bubble.has-sketch{width:min(560px,82%)}
+.sketch{margin:6px 0 2px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:10px;cursor:zoom-in;-webkit-tap-highlight-color:transparent}
+.sketch img{display:block;width:100%;height:auto;max-height:420px;object-fit:contain}
+/* Full-screen viewer, like a messenger's image viewer: dark backdrop, the sketch on white, caption, close. */
+.viewer{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:rgba(10,12,14,.94);color:#fff;touch-action:pinch-zoom}
+.viewer.open{display:flex;animation:vin .15s ease-out}
+@keyframes vin{from{opacity:0}to{opacity:1}}
+.viewer .vbar{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px}
+.viewer .vwho{flex:1;min-width:0;font-weight:600;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viewer .vclose{flex:none;width:40px;height:40px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:26px;line-height:40px;cursor:pointer}
+.viewer .vstage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px 12px;overflow:auto}
+.viewer .vstage img{max-width:100%;max-height:100%;background:#fff;border-radius:8px;padding:10px;box-sizing:border-box}
+.viewer .vcap{padding:10px 16px calc(14px + env(safe-area-inset-bottom));text-align:center;font-size:.9rem;opacity:.85}
 .msg.out .bubble{background:var(--out);color:var(--out-ink);border-bottom-right-radius:4px}
 .msg.in .bubble::before,.msg.out .bubble::after{content:"";position:absolute;bottom:0;width:9px;height:14px}
 .msg.in .bubble::before{left:-6px;background:radial-gradient(circle at 0 0,transparent 9px,var(--in) 9.5px)}
@@ -124,6 +137,9 @@ body.interactive .acts{display:flex}
 .dots{display:inline-flex;gap:4px;padding:6px 2px}
 .dots i{width:7px;height:7px;border-radius:50%;background:var(--muted);opacity:.4;animation:blink 1.1s infinite}
 .dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+.bubble.drawing{display:inline-flex;align-items:center;gap:8px;min-width:0;padding:8px 12px;color:var(--sub);font-size:.85rem}
+.bubble.drawing .pen{display:inline-flex;color:var(--accent);animation:sketching 1.2s ease-in-out infinite}
+@keyframes sketching{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(4px,-2px) rotate(-8deg)}50%{transform:translate(8px,1px) rotate(4deg)}75%{transform:translate(3px,2px) rotate(-4deg)}}
 @keyframes blink{50%{opacity:1}}
 .item{transition:opacity .3s ease, transform .3s ease}
 .item.hidden{display:none}
@@ -201,8 +217,8 @@ body.interactive .composer{display:block}
 .sheet .ft button{border:none;border-radius:20px;padding:8px 18px;background:var(--accent);color:#fff;font-weight:600}
 .sheet .ft button:disabled{opacity:.5}
 footer{margin:24px 0 0;color:var(--muted);font-size:.78rem;text-align:center}
-@media (prefers-reduced-motion: reduce){.item{transition:none}.dots i{animation:none;opacity:.7}}
-@media (max-width:520px){.av{width:32px;height:32px}.bubble{max-width:86%}.tools .tool.hide-sm{display:none}}
+@media (prefers-reduced-motion: reduce){.item{transition:none}.dots i{animation:none;opacity:.7}.bubble.drawing .pen{animation:none}}
+@media (max-width:520px){.av{width:32px;height:32px}.bubble{max-width:86%}.tools .tool.hide-sm{display:none}.tool .lbl{display:none}}
 .ico{vertical-align:-4px;flex:none}
 .tick .ico,.badge .ico,.chip .ico,.x .ico{width:14px;height:14px}
 .send .ico{width:20px;height:20px}
@@ -320,7 +336,7 @@ button .ico + *,.ico + span{margin-left:0}
     s.setAttribute('stroke-linecap','round'); s.setAttribute('stroke-linejoin','round'); s.setAttribute('aria-hidden','true');
     s.setAttribute('class','ico'); s.innerHTML = ICONS[n] || ''; return s;
   }
-  function setIcon(node, n, text){ node.textContent = ''; node.appendChild(svgIcon(n)); if(text) node.appendChild(document.createTextNode(' ' + text)); return node; }
+  function setIcon(node, n, text){ node.textContent = ''; node.appendChild(svgIcon(n)); if(text) node.appendChild(el('span','lbl',' ' + text)); if(text) node.setAttribute('aria-label', text); return node; }
   Array.prototype.forEach.call(document.querySelectorAll('[data-icon]'), function(e){ setIcon(e, e.dataset.icon, e.dataset.label || ''); });
   function withMentions(parent, text){ // text with @Handle tokens highlighted
     var parts = String(text).split(/(@[A-Za-z0-9\-]+)/);
@@ -372,10 +388,10 @@ button .ico + *,.ico + span{margin-left:0}
     if(!typingWho) subEl.textContent = baseSub;
   }
   var typingWho = null;
-  function setTyping(p){
+  function setTyping(p, drawing){
     typingWho = p || null;
     subEl.classList.toggle('typing-now', !!p);
-    subEl.textContent = p ? p.name + ' is typing…' : baseSub;
+    subEl.textContent = p ? p.name + (drawing ? ' is drawing…' : ' is typing…') : baseSub;
   }
   drawStack(); setBaseSub();
 
@@ -407,6 +423,46 @@ button .ico + *,.ico + span{margin-left:0}
     var body=el('div','body'); paras(body,text,true); b.appendChild(body);
     metaTime(b, it||{}); n.appendChild(b); return n;
   }
+  // A speaker's whiteboard sketch. Shown as an image, so the SVG can't run scripts or load anything.
+  // Tapping one opens the full-screen viewer; Back, Esc, the close button or a tap outside closes it.
+  var viewer = null, viewerPushed = false;
+  function openViewer(src, alt, who){
+    if(!viewer){
+      viewer = el('div','viewer'); viewer.setAttribute('role','dialog'); viewer.setAttribute('aria-modal','true');
+      var bar = el('div','vbar'); bar.appendChild(el('div','vwho'));
+      var x = el('button','vclose','×'); x.type = 'button'; x.setAttribute('aria-label','Close'); bar.appendChild(x);
+      var stage = el('div','vstage'); stage.appendChild(el('img'));
+      viewer.appendChild(bar); viewer.appendChild(stage); viewer.appendChild(el('div','vcap'));
+      x.addEventListener('click', closeViewer);
+      stage.addEventListener('click', function(e){ if(e.target === stage) closeViewer(); });
+      document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && viewer.classList.contains('open')) closeViewer(); });
+      window.addEventListener('popstate', function(){ if(viewer.classList.contains('open')){ viewerPushed = false; closeViewer(); } });
+      document.body.appendChild(viewer);
+    }
+    var img = viewer.querySelector('.vstage img'); img.src = src; img.alt = alt;
+    viewer.querySelector('.vwho').textContent = who || 'Sketch';
+    viewer.querySelector('.vcap').textContent = alt;
+    viewer.classList.add('open');
+    try { history.pushState({viewer: 1}, ''); viewerPushed = true; } catch(e) {}   // the phone's Back button closes it
+    viewer.querySelector('.vclose').focus();
+  }
+  function closeViewer(){
+    if(!viewer || !viewer.classList.contains('open')) return;
+    viewer.classList.remove('open');
+    if(viewerPushed){ viewerPushed = false; history.back(); }
+  }
+  function sketchFig(svg, who){
+    var fig=el('figure','sketch'), img=el('img'), m=/<title[^>]*>([\s\S]*?)<\/title>/i.exec(svg);
+    img.alt = m ? m[1].replace(/<[^>]*>/g,'').trim() : 'Sketch';
+    img.title = img.alt + ' (tap to open)';
+    // Without width/height an SVG image defaults to 300x150 and shrinks the drawing: size it from its viewBox.
+    var root = /<svg\b[^>]*>/i.exec(svg)[0], vb = /viewBox\s*=\s*["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(root);
+    if(vb && !/\swidth\s*=/.test(root)) svg = svg.replace(/<svg\b/i, '<svg width="' + vb[1] + '" height="' + vb[2] + '"');
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    fig.appendChild(img);
+    fig.addEventListener('click', function(){ openViewer(img.src, img.alt, who); });
+    return fig;
+  }
   function build(it, index){
     var n, b;
     if(it.type==='round'){ n=el('div','svc'); n.appendChild(el('span',null,it.label)); }
@@ -418,6 +474,7 @@ button .ico + *,.ico + span{margin-left:0}
       b.appendChild(w);
       if(typeof it.replyTo==='number'){ var q=quoteOf(it.replyTo); if(q) b.appendChild(q); }
       var body=el('div','body'); paras(body,it.text,true); b.appendChild(body);
+      if(typeof it.sketch==='string' && /^\s*<svg[\s>]/.test(it.sketch)){ b.classList.add('has-sketch'); b.appendChild(sketchFig(it.sketch, p.name)); }
       metaTime(b, it);
       var acts=el('div','acts');
       var rb=el('button',null,'Reply'); rb.type='button'; rb.dataset.act='reply'; acts.appendChild(rb);
@@ -560,22 +617,28 @@ button .ico + *,.ico + span{margin-left:0}
   function tail(n){ // keep the question card last
     if(askNode && askNode.parentNode) feed.insertBefore(n, askNode); else feed.appendChild(n);
   }
-  function setSpeaking(id){
-    if(id === speakingId) return;
+  function drawingBubble(){ // a pencil sketching back and forth, for "<name> is drawing…"
+    var t=el('div','bubble drawing'), pen=el('span','pen'); pen.appendChild(svgIcon('pencil'));
+    t.appendChild(pen); t.appendChild(el('span','dlabel','drawing…')); return t;
+  }
+  var speakingDrawing = false;
+  function setSpeaking(id, drawing){
+    drawing = !!(id && drawing);
+    if(id === speakingId && drawing === speakingDrawing) return;
     if(speakingNode){ speakingNode.remove(); speakingNode = null; }
-    speakingId = id || null;
-    var p = speakingId && people[speakingId];
-    setTyping(p || null);
+    speakingId = id || null; speakingDrawing = drawing;
+    var p = speakingId && (people[speakingId] || (speakingId === 'claude' ? AI : null)); // "claude": the host itself
+    setTyping(p || null, drawing);
     if(!p) return;
     speakingNode = el('div','msg in item'); speakingNode.appendChild(avatar(p));
-    var t = dotsBubble(); t.title = p.name + ' is typing'; speakingNode.appendChild(t); tail(speakingNode);
+    var t = drawing ? drawingBubble() : dotsBubble(); t.title = p.name + (drawing ? ' is drawing' : ' is typing'); speakingNode.appendChild(t); tail(speakingNode);
     speakingNode.scrollIntoView({block:'nearest', behavior: reduce ? 'auto' : 'smooth'});
   }
   function drain(){
     if(busy || !queue.length) return;
     busy = true;
     var n = queue.shift();
-    if(speakingNode && (n.dataset.type==='turn' || n.dataset.type==='ai')){ speakingNode.remove(); speakingNode=null; speakingId=null; setTyping(null); }
+    if(speakingNode && (n.dataset.type==='turn' || n.dataset.type==='ai')){ speakingNode.remove(); speakingNode=null; speakingId=null; speakingDrawing=false; setTyping(null); }
     n.classList.add('hidden'); tail(n); nodes.push(n); idx = nodes.length;
     reveal(n);
     setTimeout(function(){ busy = false; drain(); }, reduce ? 0 : 400);
@@ -634,7 +697,7 @@ button .ico + *,.ico + span{margin-left:0}
         items = d.items || [];
         for(; seen < items.length; seen++){ var n = build(items[seen], seen); if(n) queue.push(n); }
         drain();
-        if(!queue.length) setSpeaking(d.speaking);
+        if(!queue.length) setSpeaking(d.speaking, d.drawing);
         renderNote(d.note);
         renderAsk(d.ask);
         setPaused(d.paused);

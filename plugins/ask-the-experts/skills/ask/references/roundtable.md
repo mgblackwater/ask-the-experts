@@ -24,7 +24,7 @@ Writing in a finished chat, or adding people to it, reopens it: the server sets 
 
 Picking one person on the New chat screen makes a **direct chat** (`mode: "direct"` in the transcript and in the `new` event). There's no aim, no rounds and no checkpoint cards. The user's first message is already in the transcript.
 
-- Claim it like any table, with `--speaking <their id>` in the same call. Then, for every `say`, run that one persona as an agent with its dossier and the chat so far, and post its reply with the single posting call (`--turn <id> --check <dossier> --speaking none`). That's two script calls per reply at most: speed matters in a chat.
+- Claim it like any table, with `--speaking <their id>` in the same call. Then, for every `say`, run that one persona as an agent with its dossier and the chat so far, and post its reply with the single posting call (`--turn <id> --check <dossier> --speaking none`). That's two script calls per reply at most: speed matters in a chat. When a picture would explain it better, or the user asks, add a sketch (see *Sketches*).
 - It speaks like a person in a messenger chat: short replies, longer only when the user asks for depth. All the speech rules, guardrails and `NEED-WEB` handling apply.
 - `@AI` works the same as in a group.
 - If the user adds people (`add` event), it becomes a group chat (`mode: "group"`). Carry on as free talk: whoever would jump in speaks next.
@@ -83,6 +83,7 @@ Offer the aim as a question on the first checkpoint card when it was never chose
 - **Characters, not records.** Speakers play the person in this room on this topic, drawing on the dossier's Character section. Their career is background: **at most one story from their own past per discussion**, and never a sentence lifted from the dossier. Keep a `stories` note in your head per speaker; a repeated story or a dossier phrase gets the turn sent back.
 - **Pick the next speaker by who'd jump in,** not by going round the table: whoever was just provoked, needled or asked. Someone can stay quiet for a while; someone can speak twice running. Each speaker addresses <user> at most once per round, and only when they truly need something from them.
 - **Check every turn as you post it, in one call:** `python3 -I <skill>/scripts/roundtable_log.py <file>.json --claim <your id> --turn <speaker id> --check <dossier> --speaking <next id|none>`, with the turn's plain text on stdin (a heredoc; no JSON). It runs the speech check, and posts and sets the next speaker only if the turn passes. Exit status 1 means nothing was posted and it printed the flags: send the turn back once (SendMessage to the same speaker) with the flags, and post the rewrite the same way, dropping `--check` if it still flags. Don't render the page after a turn: the app redraws it from the transcript.
+- **A sketch when a picture explains it better.** A speaker may draw a quick whiteboard sketch with their turn: when <user> asks ("can you draw that?"), or when how the parts connect, a flow, a trade-off or a curve is genuinely hard to say in words. It's rare: at most one per turn, never two turns running from the same person, and the turn still talks (the sketch illustrates it; it doesn't replace it). People known for drawing to explain (Feynman's diagrams, Fowler's boxes and arrows, Grove's charts) reach for it more naturally. See *Sketches* below for how to draw and post one.
 - **No report furniture in speech.** No caveat preambles, headings, lists, numbered points, "bottom line" or summaries; at most one number per turn. Disclaimers such as "my knowledge ends in 1988" go in your moderator notes.
 - **Plain language by default.** Everyday words a non-specialist could follow, explaining any technical term in the same breath, with no acronyms. This applies to evidence cards and moderator notes too. Drop the rule only if the user asks for "technical mode".
 - **The user's situation is theirs to describe.** Put the topic and the user's own words in every brief, verbatim, under "What <user> told us". Don't paraphrase a team's job and don't add examples. Thinkers, and above all the self-persona, must never invent facts, incidents or examples about the user's organisation. (A test run derailed when a guessed description and an invented laptop incident became the whole discussion.) If the user says it drifted, stop, say plainly why, and offer a fresh start with a corrected brief.
@@ -170,10 +171,40 @@ How to speak. You're a person at a table, not a writer:
 - Your knowledge ends at your death, or at the dossier's research date. Reason about later things from your principles, without announcing the limit.
 - Never invent facts, incidents or examples about <user>'s organisation or work. Use only what <user> told us, and ask when you need more.
 - If you need a fact, say so naturally and add after your turn: `NEED-WEB: <question>` or `NEED-USER: <question> | <option> | <option>`. At most two.
-- Return only your spoken turn and any NEED lines.
+- If <user> asked you to draw, or a quick sketch would explain this far better than words (how parts connect, a flow, a trade-off), you may add one after your turn, between a line `SKETCH:` and a line `END-SKETCH`, as a small hand-drawn-looking SVG. Your words still have to stand on their own. Most turns have no sketch.
+- Return only your spoken turn, any NEED lines and any sketch.
 ```
 
 Check any famous line a speaker uses against their dossier's Verified quotes before posting it, and remove it if it isn't there. Run the speech check (above) on every turn.
+
+## Sketches
+
+Let <user> see it coming: as soon as you know a turn will have a sketch, run `roundtable_log.py <file>.json --claim <your id> --speaking <speaker id> --drawing` (or put `--drawing` on the call that already sets `--speaking`). The page then says "<name> is drawing…" with a moving pencil instead of typing dots, until the turn is posted. Use `--speaking claude --drawing` when you, the host, draw.
+
+A sketch rides on a turn: the moderator saves the SVG to `<logs>/.briefs/<transcript stem>-sketch.svg` (Write) and adds `--sketch <that file>` to the turn's single posting call. In a direct chat, where you voice the persona yourself, draw it yourself. The page shows it inside the speaker's bubble, white background, tap to enlarge.
+
+Draw like a person at a whiteboard, not a designer: 3–10 boxes, circles or arrows, short labels in the speaker's words, no colours beyond one accent, no legend or title banner. On a phone the sketch is about 260 px wide, so keep the canvas about 400 wide and labels 22 px or bigger, two or three words each. Start from this:
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" font-family="Segoe Print, Bradley Hand, Comic Sans MS, cursive">
+  <title>What the sketch shows, in one plain line</title>
+  <defs>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.5"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="none" stroke="#2b2b2b" stroke-width="1.5"/></marker>
+  </defs>
+  <g filter="url(#rough)" fill="none" stroke="#2b2b2b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="15" y="85" width="145" height="70" rx="10"/>
+    <path d="M165 120 C 190 110, 215 110, 240 120" marker-end="url(#arrow)"/>
+    <rect x="245" y="85" width="145" height="70" rx="10" stroke="#d9480f"/>
+  </g>
+  <g fill="#2b2b2b" font-size="22" text-anchor="middle">
+    <text x="87" y="127">the old way</text>
+    <text x="317" y="127">what matters</text>
+  </g>
+</svg>
+```
+
+`roundtable_log.py` refuses a sketch that isn't plain drawing (allowed: `svg g title desc defs filter feTurbulence feDisplacementMap marker path line polyline polygon rect circle ellipse text tspan use`), has scripts, event handlers or links outside the sketch, has no `<title>`, or is over 40 KB. Fix the reason it prints and post again; if it still fails, post the turn without the sketch.
 
 ## Transcript
 
