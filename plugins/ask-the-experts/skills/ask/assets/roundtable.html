@@ -54,6 +54,8 @@ body.served .back{display:block}
 .stack .av:first-child{margin-left:0}
 .ttl{flex:1;min-width:min(120px,35vw)} /* the name stays readable; the buttons give way (and scroll) first */
 .ttl .name{font-weight:600;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ttl .name.renamable{cursor:pointer}
+.ttl .name.renamable:hover{text-decoration:underline dotted;text-underline-offset:3px}
 .ttl .sub{font-size:.8rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ttl .sub.typing-now{color:var(--accent)}
 .tools{display:flex;gap:4px;align-items:center;flex:0 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none} /* never wider than the screen */
@@ -609,6 +611,20 @@ button .ico + *,.ico + span{margin-left:0}
   var btnPause = document.getElementById('pause'), btnWrap = document.getElementById('wrap');
   var mentionBox = document.getElementById('mentions');
   var replyTo = null;
+
+  // Tap the chat's name to rename it. The name sticks when people join; an empty name goes back to their names.
+  titleEl.classList.add('renamable'); titleEl.title = 'Rename this chat';
+  titleEl.setAttribute('role', 'button'); titleEl.tabIndex = 0;
+  function rename(){
+    var t = window.prompt('Name this chat (leave it empty to use the people’s names)', titleEl.textContent);
+    if(t === null) return;
+    post('api/rename', {transcript: transcript, title: t.trim()}).then(function(j){
+      titleEl.textContent = j.title; document.title = j.title;
+      try { if(window.parent !== window) window.parent.postMessage({type:'aet-refresh'}, '*'); } catch(e){}
+    }).catch(function(e){ hint.textContent = 'Could not rename: ' + e.message; });
+  }
+  titleEl.addEventListener('click', rename);
+  titleEl.addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); rename(); } });
 
   function post(url, body){
     return fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
