@@ -11,7 +11,7 @@
       "name": "ask-the-experts",
       "source": "./plugins/ask-the-experts",
       "description": "Sourced personas of great thinkers that answer, debate each other, and talk with you in a local roundtable app",
-      "version": "0.5.1"
+      "version": "0.5.2"
     }
   ]
 }

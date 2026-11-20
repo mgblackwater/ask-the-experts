@@ -352,7 +352,7 @@ button .ico + *,.ico + span{margin-left:0}
       if(r.last){ p.appendChild(el('b', null, (r.last.who==='You' ? 'You' : (r.last.who||'').split(' ').slice(-1)[0]) + ': ')); p.appendChild(document.createTextNode(r.last.text)); }
       else p.textContent = r.mode==='direct' ? 'Direct chat' : (r.people||[]).join(', ');
       t2.appendChild(p);
-      var bd = el('span','badge' + (r.live ? '' : ' done'), r.live ? 'LIVE' : ''); if(!r.live) bd.appendChild(svgIcon('check')); t2.appendChild(bd);
+      if(!r.live){ var bd = el('span','badge done'); bd.appendChild(svgIcon('check')); t2.appendChild(bd); } // wrapped up: a quiet tick; no LIVE badge, any chat can be continued
       m.appendChild(t2); a.appendChild(m);
       var ab = el('button','arch'); ab.appendChild(svgIcon(r.archived ? 'unarchive' : 'archive')); ab.type='button';
       ab.title = r.archived ? 'Unarchive: move back to your chats' : 'Archive this chat (nothing is deleted)';

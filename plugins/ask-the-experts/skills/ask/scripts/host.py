@@ -12,16 +12,16 @@ import pathlib
 import subprocess
 import sys
 
-BASE = pathlib.Path.home() / ".claude" / "plugins" / "cache" / "blackwater-skills" / "ask-the-experts"
+BASE = pathlib.Path.home() / ".claude" / "plugins" / "cache"  # <marketplace>/ask-the-experts/<version>
 SCRIPTS = {"server": "roundtable_server.py", "moderator": "headless_moderator.py"}
 
 
 def newest_scripts():
     def key(d):
         return [int(x) if x.isdigit() else 0 for x in d.name.split(".")]
-    versions = [d for d in BASE.glob("*") if (d / "skills" / "ask" / "scripts").is_dir()] if BASE.is_dir() else []
+    versions = [d for d in BASE.glob("*/ask-the-experts/*") if (d / "skills" / "ask" / "scripts").is_dir()] if BASE.is_dir() else []
     if not versions:
-        sys.exit(f"Ask the Experts isn't installed under {BASE}. Run: claude plugin install ask-the-experts@blackwater-skills")
+        sys.exit(f"Ask the Experts isn't installed under {BASE}. Install it in Claude Code (/plugin).")
     return max(versions, key=key) / "skills" / "ask" / "scripts"
 
 

@@ -46,10 +46,11 @@ $claude = Get-Command claude -ErrorAction SilentlyContinue
 if (-not $claude) { throw "Claude Code isn't on PATH. Install it and sign in, then run this again." }
 Ok "Claude Code: $($claude.Source)"
 
-$plugins = Join-Path $env:USERPROFILE ".claude\plugins\cache\blackwater-skills\ask-the-experts"
-$latest = Get-ChildItem $plugins -Directory -ErrorAction SilentlyContinue |
+# Any marketplace: blackwater-skills (full edition) or ask-the-experts (public edition).
+$plugins = Join-Path $env:USERPROFILE ".claude\plugins\cache\*\ask-the-experts\*"
+$latest = Get-ChildItem $plugins -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^\d+(\.\d+)+' } |
   Sort-Object { [version]($_.Name -replace '[^0-9.]', '') } | Select-Object -Last 1
-if (-not $latest) { throw "The ask-the-experts plugin isn't installed. Run: claude plugin install ask-the-experts@blackwater-skills" }
+if (-not $latest) { throw "The ask-the-experts plugin isn't installed. Install it in Claude Code (/plugin), then run this again." }
 $scripts = Join-Path $latest.FullName "skills\ask\scripts"
 Ok "Plugin: ask-the-experts $($latest.Name)"
 
@@ -67,7 +68,7 @@ if (Test-Path $cfgPath) {
     port = $Port; refresh_after_days = 90; remind_every_days = 30; last_freshness_check = (Get-Date -Format "yyyy-MM-dd")
     host_name = "Claude"; chat_history = "none"
   }
-  ($cfg | ConvertTo-Json) | Set-Content -Encoding UTF8 $cfgPath
+  [IO.File]::WriteAllText($cfgPath, ($cfg | ConvertTo-Json))  # UTF-8 without BOM: Python's json can't read a BOM
   Ok "Created settings: $cfgPath (run /ask-the-experts:ask setup in Claude Code later to change your name)"
 }
 foreach ($d in @("chats", "personas", "persona-sources", "avatars")) { New-Item -ItemType Directory -Force -Path (Join-Path $HomeDir $d) | Out-Null }
@@ -83,6 +84,12 @@ $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoi
   -RestartCount 99 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
+# Stopping a task ends host.py but not the app or moderator it started. End any left over from an
+# earlier run, so only one app holds the port and only one moderator answers each chat.
+foreach ($n in @("Ask the Experts - App", "Ask the Experts - Moderator")) { Stop-ScheduledTask -TaskName $n -ErrorAction SilentlyContinue }
+Get-CimInstance Win32_Process -Filter "Name LIKE 'python%'" |
+  Where-Object { $_.CommandLine -match 'roundtable_server\.py|headless_moderator\.py' -or $_.CommandLine -match [regex]::Escape($hostPy) } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 foreach ($t in @(@{Name = "Ask the Experts - App"; Arg = "server"}, @{Name = "Ask the Experts - Moderator"; Arg = "moderator"})) {
   $action = New-ScheduledTaskAction -Execute $pyw -Argument "-I `"$hostPy`" $($t.Arg)" -WorkingDirectory $HomeDir
   Register-ScheduledTask -TaskName $t.Name -Action $action -Trigger $trigger -Settings $settings -Principal $principal `
@@ -102,11 +109,12 @@ try {
 $ts = Get-Command tailscale -ErrorAction SilentlyContinue
 if ($ts) {
   try {
-    & $ts.Source serve --bg $Port | Out-Null
+    # Its own HTTPS port, so an existing share on the tailnet address is left alone.
+    & $ts.Source serve --bg --https $Port $Port | Out-Null
     $dns = (& $ts.Source status --json | ConvertFrom-Json).Self.DNSName.TrimEnd(".")
-    Ok "Shared on your tailnet: https://$dns/"
+    Ok "Shared on your tailnet: https://${dns}:$Port/"
     Say "On your phone: turn Tailscale on, open that address, then Share > Add to Home Screen."
-  } catch { Warn "tailscale serve failed: $($_.Exception.Message). Try: tailscale serve --bg $Port" }
+  } catch { Warn "tailscale serve failed: $($_.Exception.Message). Try: tailscale serve --bg --https $Port $Port" }
 } else { Warn "Tailscale isn't installed; the app is only reachable on this PC." }
 
 Write-Host "`nDone. Keep this PC awake and signed in (see the NUC guide). Moderator log: $(Join-Path $HomeDir 'chats\.moderator.log')`n"

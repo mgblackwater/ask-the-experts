@@ -4,6 +4,13 @@
 Usage:
   python3 -I roundtable_log.py <transcript.json> [--claim MODERATOR [--take-over]] [--speaking ID | --speaking none]
                               [--clear-ask] [--finish] < items.json
+  python3 -I roundtable_log.py <transcript.json> --claim MODERATOR --turn WHO [--check [DOSSIER]]
+                              [--speaking NEXT | --speaking none] < turn.txt
+
+One call per turn: --turn WHO reads the turn as plain text (no JSON), --check runs the speech check
+first, and --speaking sets who's next. If the check flags anything, nothing is written: the flags
+are printed and the script exits with status 1, so the turn can be sent back and rewritten.
+There's no need to render the page after a turn: the app redraws it from the transcript.
 
 stdin holds one object or a list of objects (may be empty). Each object is either
   - a transcript item: {"type": "turn" | "user" | "moderator" | "evidence" | "round" | "ai", ...}
@@ -22,6 +29,9 @@ stdin holds one object or a list of objects (may be empty). Each object is eithe
                 refreshes your heartbeat. If another session holds it, nothing is written and the script
                 exits with status 3: leave that roundtable alone. Pass --claim on every call.
 --take-over     with --claim: take the roundtable even from an active holder. Only when the user asks.
+--turn WHO      stdin is the text of one turn by participant WHO (instead of JSON items).
+--check [DOSSIER]  speech-check every turn being posted (with DOSSIER: also copied runs from it);
+                post nothing and exit 1 if anything is flagged.
 
 Locks the transcript, because roundtable_server.py writes the user's messages to it too.
 """
@@ -35,6 +45,7 @@ from filelock import lock as lock_file, unlock as unlock_file  # noqa: E402
 
 STALE = datetime.timedelta(hours=1)  # a holder silent this long has gone away (a card can wait a while)
 CLAIMED = 3                          # exit status: another session moderates this roundtable
+FLAGGED = 1                          # exit status: --check flagged a turn; nothing was written
 
 
 def now():
@@ -64,9 +75,23 @@ def main():
     if not argv:
         sys.exit(__doc__)
     path = pathlib.Path(argv[0])
-    raw = sys.stdin.read().strip() if not sys.stdin.isatty() else ""
-    new = json.loads(raw) if raw else []
-    new = new if isinstance(new, list) else [new]
+    # Read bytes and decode as UTF-8: on Windows sys.stdin uses the ANSI code page (cp1252).
+    raw = sys.stdin.buffer.read().decode("utf-8-sig").strip() if not sys.stdin.isatty() else ""
+    if "--turn" in argv:
+        if not raw:
+            sys.exit("--turn needs the turn's text on stdin")
+        new = [{"type": "turn", "who": argv[argv.index("--turn") + 1], "text": raw}]
+    else:
+        new = json.loads(raw) if raw else []
+        new = new if isinstance(new, list) else [new]
+    if "--check" in argv:
+        from speech_check import check   # noqa: E402  (same folder)
+        i = argv.index("--check") + 1
+        dossier = argv[i] if i < len(argv) and not argv[i].startswith("--") else None
+        flags = [f for obj in new if obj.get("type") == "turn" for f in check(obj.get("text", ""), dossier)]
+        if flags:
+            print("Not posted. The speech check flagged:\n" + "\n".join("- " + f for f in flags))
+            sys.exit(FLAGGED)
     with open(path, "r+", encoding="utf-8") as f:
         lock_file(f)
         data = json.load(f)
