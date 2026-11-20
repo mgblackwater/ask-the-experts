@@ -69,6 +69,8 @@ Headless rules:
 - Be quick: the user is waiting in a chat. Post each turn with one roundtable_log.py call
   (--claim, --turn <id>, --check <dossier>, --speaking <next|none>, the text on stdin). Don't render the
   page (the app redraws it), and don't re-read the skill or a dossier you already read in this session.
+- Pictures are sketches, never text art: no ASCII diagrams or code blocks in a turn. When a speaker would draw,
+  post a real SVG with --sketch and show "--drawing" first (references/roundtable.md, *Sketches*).
 - Keep your final reply to one line saying what you did."""
 
 
@@ -243,6 +245,13 @@ def run_claude(logs_dir, state, key, events, dry_run):
         WARM.pop(key, None)
         warm = None
     how = "warm" if warm else ("resumed" if session and not one_off else "new")
+    version = skill.parent.parent.name
+    if how == "resumed" and state.setdefault("versions", {}).get(key) != version:
+        # The session's context holds the skill as it was when the chat began; new features (sketches)
+        # would be missed. One re-read brings it up to date.
+        prompt += (f"\n\nThe ask-the-experts skill has been updated (now {version}) since this chat's session began. "
+                   "Before handling these events, re-read SKILL.md and references/roundtable.md in the skill folder.")
+        how += f", skill updated to {version}"
     if dry_run:
         log(logs_dir, f"DRY RUN for {key}: {len(events)} event(s), session {how}")
         return True
@@ -272,6 +281,7 @@ def run_claude(logs_dir, state, key, events, dry_run):
         return False
     if result.get("session_id") and not one_off:
         state["sessions"][key] = result["session_id"]   # resume this chat's session after a restart
+        state.setdefault("versions", {})[key] = version  # the skill version this session has read
     log(logs_dir, f"done {key} in {time.time() - started:.0f}s: {text[:200]}")
     return True
 

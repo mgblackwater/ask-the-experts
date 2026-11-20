@@ -61,9 +61,20 @@ def copied_runs(turn, source):
     return hits
 
 
+def text_art(body):
+    """A code block, or three or more lines drawn mostly with | _ / \\ - + < > ^ = characters."""
+    if "```" in body or "~~~" in body:
+        return True
+    drawn = [ln for ln in body.splitlines() if len(ln.strip()) >= 3
+             and sum(c in "|_/\\-+<>^=*#" for c in ln.strip()) / len(ln.strip().replace(" ", "") or "x") >= 0.5]
+    return len(drawn) >= 3
+
+
 def check(turn, dossier=None):
     flags = []
     body = turn.strip()
+    if text_art(body):
+        flags.append("text art or a code block: a picture can't be spoken; draw it as a sketch (--sketch) and keep the words plain")
     n = len(words(body))
     if n > MAX_WORDS:
         flags.append(f"too long: {n} words (keep it under about 50)")
