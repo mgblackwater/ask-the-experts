@@ -14,7 +14,7 @@ A live discussion in which **each thinker is a separate agent** that has read on
 
 ### Running headless (always-on host)
 
-On an always-on host, `scripts/headless_moderator.py` watches the inbox and runs you with `claude -p` for each batch of events about one chat. Each chat resumes its own session, so you keep the conversation's context. In that mode, handle the events you're given, then carry the chat on yourself until it needs the user (a checkpoint card, a question for them, the end, or just their next message), then stop. Use the moderator id in the prompt for every `--claim`. Never wait, poll, start a Monitor, open a browser or ask anything in the terminal: everything for the user goes on the page. Setup is in [always-on-host.md](always-on-host.md).
+On an always-on host, `scripts/headless_moderator.py` watches the inbox and hands you each batch of events about one chat. Each chat has its own session, kept open between messages (and resumed after a restart), so you keep the conversation's context and don't need to re-read the skill or a dossier you've already read. In that mode, handle the events you're given, then carry the chat on yourself until it needs the user (a checkpoint card, a question for them, the end, or just their next message), then stop. Use the moderator id in the prompt for every `--claim`. Never wait, poll, start a Monitor, open a browser or ask anything in the terminal: everything for the user goes on the page. Setup is in [always-on-host.md](always-on-host.md).
 
 ### Finished chats can be picked up again
 
@@ -24,7 +24,7 @@ Writing in a finished chat, or adding people to it, reopens it: the server sets 
 
 Picking one person on the New chat screen makes a **direct chat** (`mode: "direct"` in the transcript and in the `new` event). There's no aim, no rounds and no checkpoint cards. The user's first message is already in the transcript.
 
-- Claim it like any table. Then, for every `say`, run that one persona as an agent with its dossier and the chat so far, and post its reply as a `turn`.
+- Claim it like any table, with `--speaking <their id>` in the same call. Then, for every `say`, run that one persona as an agent with its dossier and the chat so far, and post its reply with the single posting call (`--turn <id> --check <dossier> --speaking none`). That's two script calls per reply at most: speed matters in a chat.
 - It speaks like a person in a messenger chat: short replies, longer only when the user asks for depth. All the speech rules, guardrails and `NEED-WEB` handling apply.
 - `@AI` works the same as in a group.
 - If the user adds people (`add` event), it becomes a group chat (`mode: "group"`). Carry on as free talk: whoever would jump in speaks next.
@@ -82,7 +82,7 @@ Offer the aim as a question on the first checkpoint card when it was never chose
 - **Speech, not writing.** Turns are transcribed talk: contractions, the odd "look" or "well", fragments, restarts, trailing off. No colons or semicolons, no neat lists of three, no "X, not Y" slogan endings, no tidy closing line, and no quotation marks: a person says "I always said controversy sells", not a citation.
 - **Characters, not records.** Speakers play the person in this room on this topic, drawing on the dossier's Character section. Their career is background: **at most one story from their own past per discussion**, and never a sentence lifted from the dossier. Keep a `stories` note in your head per speaker; a repeated story or a dossier phrase gets the turn sent back.
 - **Pick the next speaker by who'd jump in,** not by going round the table: whoever was just provoked, needled or asked. Someone can stay quiet for a while; someone can speak twice running. Each speaker addresses <user> at most once per round, and only when they truly need something from them.
-- **Check every turn before posting it:** run `python3 -I <skill>/scripts/speech_check.py <dossier>` with the turn on stdin. If it flags anything, send the turn back once (SendMessage to the same speaker) with the flags, and post the rewrite.
+- **Check every turn as you post it, in one call:** `python3 -I <skill>/scripts/roundtable_log.py <file>.json --claim <your id> --turn <speaker id> --check <dossier> --speaking <next id|none>`, with the turn's plain text on stdin (a heredoc; no JSON). It runs the speech check, and posts and sets the next speaker only if the turn passes. Exit status 1 means nothing was posted and it printed the flags: send the turn back once (SendMessage to the same speaker) with the flags, and post the rewrite the same way, dropping `--check` if it still flags. Don't render the page after a turn: the app redraws it from the transcript.
 - **No report furniture in speech.** No caveat preambles, headings, lists, numbered points, "bottom line" or summaries; at most one number per turn. Disclaimers such as "my knowledge ends in 1988" go in your moderator notes.
 - **Plain language by default.** Everyday words a non-specialist could follow, explaining any technical term in the same breath, with no acronyms. This applies to evidence cards and moderator notes too. Drop the rule only if the user asks for "technical mode".
 - **The user's situation is theirs to describe.** Put the topic and the user's own words in every brief, verbatim, under "What <user> told us". Don't paraphrase a team's job and don't add examples. Thinkers, and above all the self-persona, must never invent facts, incidents or examples about the user's organisation. (A test run derailed when a guessed description and an invented laptop incident became the whole discussion.) If the user says it drifted, stop, say plainly why, and offer a fresh start with a corrected brief.
@@ -142,7 +142,7 @@ NEED-USER: <question for the user> | <option> | <option>
 
 **One brief file per table.** Write the shared part once to `<logs>/.briefs/<transcript stem>.md`: the topic and the user's words verbatim, the aim, who's at the table, the "How to speak" rules below, and the table's guardrails. Each speaker's prompt then names its dossier, points to that file, and adds only what changes per turn: the last few turns word for word, the stories they've already told, and what their turn is for. Update the file when the user adds or corrects something.
 
-Run each thinker as an Agent (`subagent_type: general-purpose`), one at a time. Before each launch, run `roundtable_log.py <file>.json --claim <your id> --speaking <id>`; afterwards post the turn with the next speaker's id. Fill in:
+Run each thinker as an Agent (`subagent_type: general-purpose`), one at a time. Each turn's single posting call (above) already sets `--speaking` to the next speaker, so the page shows them typing while they think; only the first speaker needs its own `--speaking <id>` call. Fill in:
 
 ```
 You are playing <Name> in a roundtable discussion. It is a simulation to help the user think, not <Name>'s real words.

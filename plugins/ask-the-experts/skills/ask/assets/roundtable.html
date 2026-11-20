@@ -533,6 +533,10 @@ button .ico + *,.ico + span{margin-left:0}
   // A finished chat served by the app stays open too: writing in it picks the conversation up again.
   var transcript = data.live ? String(data.live).split('/').pop() : data.transcript;
   if(!(transcript && /^https?:$/.test(location.protocol))) return;
+  // Open at the latest message, like a messenger, and again once avatars and fonts have settled the heights.
+  function toLatest(){ window.scrollTo(0, document.documentElement.scrollHeight); }
+  toLatest();
+  window.addEventListener('load', toLatest);
   var badge = el('span','live' + (data.live ? '' : ' done'), data.live ? 'LIVE' : 'FINISHED');
   document.getElementById('tools').insertBefore(badge, document.getElementById('replay'));
   var seen = items.length, queue = [], busy = false, speakingNode = null, speakingId = null;

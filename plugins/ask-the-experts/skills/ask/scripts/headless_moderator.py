@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """Always-on moderator for an Ask the Experts host (an always-on PC, a home server).
 
-Watches the app's inbox and, for each batch of events about one chat, runs Claude Code in
-headless mode (`claude -p`) with the ask-the-experts instructions. Claude handles the events
-and carries the chat on until it needs the user, then exits. One run at a time.
+Watches the app's inbox and, for each batch of events about one chat, hands them to Claude Code
+in headless mode (`claude -p`) with the ask-the-experts instructions. Claude handles the events
+and carries the chat on until it needs the user. One turn at a time.
+
+Each chat keeps one Claude process open between messages (stream-json input), so a follow-up
+starts at once instead of reloading Claude Code. A chat idle for IDLE_CLOSE, or beyond MAX_WARM
+open chats, is closed; its session is kept and resumed (--resume) on the next message.
+Claude starts lean: only this plugin, no other plugins, MCP servers, hooks or user CLAUDE.md
+(set "moderator_lean": false in the settings to load everything). The model is the settings'
+"moderator_model", else the "model" in ~/.claude/settings.json.
 
 Usage:
   python3 -I headless_moderator.py [--once] [--dry-run]
 
 Reads ~/.claude/ask-the-experts/config.json for the logs folder. Keeps its place in
-<logs>/.moderator-state.json and writes <logs>/.moderator.log. Each chat keeps its own Claude
-session (resumed with --resume), so the moderator remembers the conversation between events.
+<logs>/.moderator-state.json and writes <logs>/.moderator.log.
 
 --once      handle whatever is waiting, then exit (for testing)
 --dry-run   print the command it would run instead of running Claude
@@ -22,12 +28,17 @@ import json
 import os
 import pathlib
 import platform
+import queue
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 CONFIG = pathlib.Path.home() / ".claude" / "ask-the-experts" / "config.json"
+USER_SETTINGS = pathlib.Path.home() / ".claude" / "settings.json"
+IDLE_CLOSE = 30 * 60        # close a chat's Claude process after this long without a message
+MAX_WARM = 4                # at most this many chats keep a Claude process open
 INBOX = ".ask-the-experts-inbox.jsonl"
 STATE = ".moderator-state.json"
 LOG = ".moderator.log"
@@ -55,6 +66,9 @@ Headless rules:
   a checkpoint card, a question to them, a finished chat, or simply their next message. Then stop.
 - Never wait, poll, start a Monitor, open a browser or ask questions in this terminal. Anything for the user goes on the page.
 - Use the moderator id you are given for every roundtable_log.py --claim.
+- Be quick: the user is waiting in a chat. Post each turn with one roundtable_log.py call
+  (--claim, --turn <id>, --check <dossier>, --speaking <next|none>, the text on stdin). Don't render the
+  page (the app redraws it), and don't re-read the skill or a dossier you already read in this session.
 - Keep your final reply to one line saying what you did."""
 
 
@@ -119,8 +133,99 @@ def read_new_events(logs_dir, state):
     return events
 
 
+class ClaudeSession:
+    """One Claude Code process for one chat, kept open between messages (stream-json in and out)."""
+
+    def __init__(self, cmd, cwd):
+        self.proc = subprocess.Popen(cmd, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+        self.lines = queue.Queue()
+        self.stderr = []
+        self.last_used = time.time()
+        threading.Thread(target=self._read_stdout, daemon=True).start()
+        threading.Thread(target=self._read_stderr, daemon=True).start()
+
+    def _read_stdout(self):
+        for line in self.proc.stdout:
+            self.lines.put(line)
+        self.lines.put(None)            # end of output: the process has ended
+
+    def _read_stderr(self):
+        for line in self.proc.stderr:
+            self.stderr = (self.stderr + [line])[-20:]
+
+    def alive(self):
+        return self.proc.poll() is None
+
+    def turn(self, prompt, timeout):
+        """Send one message; return Claude's result for it (a dict), or None on timeout."""
+        self.last_used = time.time()
+        msg = {"type": "user", "message": {"role": "user", "content": prompt}}
+        try:
+            self.proc.stdin.write(json.dumps(msg, ensure_ascii=False) + "\n")
+            self.proc.stdin.flush()
+        except OSError:
+            return {"is_error": True, "result": "the Claude process had ended: " + "".join(self.stderr)[-300:]}
+        deadline = time.time() + timeout
+        while True:
+            try:
+                line = self.lines.get(timeout=max(0.1, deadline - time.time()))
+            except queue.Empty:
+                return None
+            if line is None:            # the process ended without a result
+                self.proc.wait()
+                return {"is_error": True, "result": f"Claude exited (code {self.proc.returncode}): "
+                                                    + "".join(self.stderr)[-300:]}
+            try:
+                m = json.loads(line)
+            except ValueError:
+                continue
+            if m.get("type") == "result":
+                self.last_used = time.time()
+                return m
+
+    def close(self, wait=10):
+        try:
+            self.proc.stdin.close()     # ends the conversation; Claude exits on its own
+            self.proc.wait(timeout=wait)
+        except (OSError, subprocess.TimeoutExpired):
+            self.proc.kill()
+
+
+WARM = {}   # chat key -> ClaudeSession
+
+
+def close_idle(logs_dir, keep=None):
+    """Close chats idle too long, and the least recently used beyond MAX_WARM."""
+    for key, s in list(WARM.items()):
+        if not s.alive() or time.time() - s.last_used > IDLE_CLOSE:
+            WARM.pop(key).close()
+            log(logs_dir, f"closed {key} (idle)")
+    while len(WARM) > MAX_WARM:
+        key = min((k for k in WARM if k != keep), key=lambda k: WARM[k].last_used)
+        WARM.pop(key).close()
+        log(logs_dir, f"closed {key} (too many open chats)")
+
+
+def claude_cmd(claude, skill, logs_dir, session):
+    cfg = load_json(CONFIG, {})
+    cmd = [claude, "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
+           "--append-system-prompt", SYSTEM, "--permission-mode", "acceptEdits",
+           "--add-dir", str(skill), "--add-dir", str(logs_dir), "--allowedTools", *ALLOWED_TOOLS]
+    if cfg.get("moderator_lean", True):
+        # Only this plugin: skip the user's other plugins, MCP servers, hooks and CLAUDE.md. Much faster to
+        # start and to answer, and nothing else in the user's setup steers the moderator.
+        cmd += ["--setting-sources", "project,local", "--strict-mcp-config", "--plugin-dir", str(skill.parent.parent)]
+    model = cfg.get("moderator_model") or load_json(USER_SETTINGS, {}).get("model")
+    if model:
+        cmd += ["--model", model]
+    if session:
+        cmd += ["--resume", session]
+    return cmd
+
+
 def run_claude(logs_dir, state, key, events, dry_run):
-    """Run Claude for one chat's events. Returns True if it worked, False to retry later."""
+    """Hand one chat's events to Claude. Returns True if it worked, False to retry later."""
     skill = plugin_dir()
     claude = shutil.which("claude")
     if not claude:
@@ -132,35 +237,42 @@ def run_claude(logs_dir, state, key, events, dry_run):
               f"Logs folder (chats): {logs_dir}\n"
               f"New app events (oldest first), as JSON:\n{json.dumps(events, ensure_ascii=False, indent=1)}\n\n"
               "Handle them now, following the ask-the-experts skill.")
-    cmd = [claude, "-p", prompt, "--output-format", "json", "--append-system-prompt", SYSTEM,
-           "--permission-mode", "acceptEdits", "--add-dir", str(skill), "--add-dir", str(logs_dir),
-           "--allowedTools", *ALLOWED_TOOLS]
-    if session:
-        cmd += ["--resume", session]
+    one_off = key == "_persona"          # persona builds get a fresh session each
+    warm = WARM.get(key)
+    if warm and not warm.alive():
+        WARM.pop(key, None)
+        warm = None
+    how = "warm" if warm else ("resumed" if session and not one_off else "new")
     if dry_run:
-        log(logs_dir, f"DRY RUN for {key}: {len(events)} event(s), resume={session or 'new'}")
+        log(logs_dir, f"DRY RUN for {key}: {len(events)} event(s), session {how}")
         return True
     log(logs_dir, f"run for {key}: {len(events)} event(s) ({', '.join(e.get('kind', '?') for e in events)}), "
-                  f"session {'resumed' if session else 'new'}")
-    try:
-        out = subprocess.run(cmd, cwd=str(logs_dir), capture_output=True, text=True, timeout=RUN_TIMEOUT,
-                             encoding="utf-8", errors="replace")
-    except subprocess.TimeoutExpired:
+                  f"session {how}")
+    if not warm:
+        warm = ClaudeSession(claude_cmd(claude, skill, logs_dir, None if one_off else session), str(logs_dir))
+        if not one_off:
+            WARM[key] = warm
+            close_idle(logs_dir, keep=key)
+    started = time.time()
+    result = warm.turn(prompt, RUN_TIMEOUT)
+    if one_off:
+        warm.close()
+    if result is None:
         log(logs_dir, f"TIMEOUT after {RUN_TIMEOUT // 60} min for {key}")
+        WARM.pop(key, None)
+        warm.close(wait=0)
         return True                     # it did work for 45 minutes; don't replay the same events
-    try:
-        result = json.loads(out.stdout)
-    except ValueError:
-        result = {"is_error": True, "result": (out.stderr or out.stdout)[-400:]}
     text = str(result.get("result", "")).strip()
-    if result.get("is_error") or out.returncode != 0:
-        log(logs_dir, f"ERROR for {key} (code {out.returncode}): {text[:300]}")
+    if result.get("is_error"):
+        log(logs_dir, f"ERROR for {key}: {text[:300]}")
+        if WARM.get(key) is warm:
+            WARM.pop(key).close(wait=0)  # start clean next time
         if session and "session" in text.lower() and "not found" in text.lower():
             state["sessions"].pop(key, None)   # a stale session id: start fresh next time
         return False
-    if result.get("session_id") and key != "_persona":
-        state["sessions"][key] = result["session_id"]   # resume this chat's session next time
-    log(logs_dir, f"done {key}: {text[:200]}")
+    if result.get("session_id") and not one_off:
+        state["sessions"][key] = result["session_id"]   # resume this chat's session after a restart
+    log(logs_dir, f"done {key} in {time.time() - started:.0f}s: {text[:200]}")
     return True
 
 
@@ -192,9 +304,18 @@ def main():
     if args.once and "offset" not in state:
         state["offset"] = 0
     log(logs_dir, f"moderator {MODERATOR_ID} watching {logs_dir / INBOX} (plugin {plugin_dir().parent.parent.name})")
+    try:
+        watch(args, logs_dir, state, state_path)
+    finally:
+        for s in WARM.values():
+            s.close()
+
+
+def watch(args, logs_dir, state, state_path):
     pending, last_event = {}, 0.0
     retry = {}                          # key -> (attempts so far, earliest time to try again)
     while True:
+        close_idle(logs_dir)
         for e in read_new_events(logs_dir, state):
             key = e.get("transcript") or ("_persona" if e.get("kind") == "persona" else "_other")
             pending.setdefault(key, []).append(e)

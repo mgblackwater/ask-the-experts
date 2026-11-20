@@ -46,7 +46,7 @@ import urllib.request
 SKILL = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SKILL / "scripts"))
 from filelock import lock as lock_file, unlock as unlock_file  # noqa: E402
-from render_roundtable import render  # noqa: E402
+from render_roundtable import TEMPLATE, render  # noqa: E402
 
 CONFIG = pathlib.Path.home() / ".claude" / "ask-the-experts" / "config.json"
 INBOX = ".ask-the-experts-inbox.jsonl"
@@ -311,8 +311,9 @@ class App(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def _refresh_page(self, route):
-        """Render a chat page from its transcript when the page is missing or older, or predates the
-        "transcript" field that lets a finished chat be picked up again."""
+        """Render a chat page from its transcript when the page is missing, older than its transcript or
+        than the page template (a plugin update), or predates the "transcript" field that lets a finished
+        chat be picked up again."""
         name = route.rsplit("/", 1)[-1]
         if not (name.startswith("roundtable-") and name.endswith(".html")) or not NAME.match(name[:-5] + ".json"):
             return
@@ -320,7 +321,7 @@ class App(http.server.SimpleHTTPRequestHandler):
         if not src.is_file():
             return
         try:
-            stale = (not page.is_file() or src.stat().st_mtime > page.stat().st_mtime
+            stale = (not page.is_file() or max(src.stat().st_mtime, TEMPLATE.stat().st_mtime) > page.stat().st_mtime
                      or '"transcript"' not in page.read_text(encoding="utf-8"))
             if stale:
                 live = bool(json.loads(src.read_text(encoding="utf-8")).get("live"))
