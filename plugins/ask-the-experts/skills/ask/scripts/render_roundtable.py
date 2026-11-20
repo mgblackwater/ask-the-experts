@@ -49,7 +49,7 @@ def render(src, out, live=False):
     if live:
         data["live"] = os.path.relpath(src.resolve(), out.resolve().parent)
     else:
-        for key in ("live", "speaking", "ask", "note"):
+        for key in ("live", "speaking", "drawing", "ask", "note"):
             data.pop(key, None)
     # Escape so the JSON can't close the <script> element early.
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")

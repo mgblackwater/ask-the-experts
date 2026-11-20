@@ -5,7 +5,7 @@ Usage:
   python3 -I roundtable_log.py <transcript.json> [--claim MODERATOR [--take-over]] [--speaking ID | --speaking none]
                               [--clear-ask] [--finish] < items.json
   python3 -I roundtable_log.py <transcript.json> --claim MODERATOR --turn WHO [--check [DOSSIER]]
-                              [--speaking NEXT | --speaking none] < turn.txt
+                              [--sketch SKETCH.svg] [--speaking NEXT | --speaking none] < turn.txt
 
 One call per turn: --turn WHO reads the turn as plain text (no JSON), --check runs the speech check
 first, and --speaking sets who's next. If the check flags anything, nothing is written: the flags
@@ -21,7 +21,8 @@ stdin holds one object or a list of objects (may be empty). Each object is eithe
   - {"type": "participant", "id": "...", "name": "...", "kind": "thinker" | "self", "lens": "...", "avatar": "<slug>"}
     adds someone to the table
   - {"type": "meta", "topic": "...", "title": "...", "aim": "debate|decide|truth|explore"} updates the header or the aim
---speaking ID   shows a "typing" bubble for that participant on the page
+--speaking ID   shows a "typing" bubble for that participant on the page ("claude": the host itself)
+--drawing       with --speaking ID: show "<name> is drawing…" instead (cleared when their turn is posted)
 --clear-ask     removes the open question card
 --finish        marks the run finished (the page stops polling and shows "Finished")
 --claim ID      only one Claude session may moderate a roundtable. Claims it for ID (your moderator id) if
@@ -32,13 +33,19 @@ stdin holds one object or a list of objects (may be empty). Each object is eithe
 --turn WHO      stdin is the text of one turn by participant WHO (instead of JSON items).
 --check [DOSSIER]  speech-check every turn being posted (with DOSSIER: also copied runs from it);
                 post nothing and exit 1 if anything is flagged.
+--sketch FILE   with --turn: attach a whiteboard sketch (an SVG file) to the turn. Only plain drawing is
+                allowed (shapes, text, a roughening filter, markers): no scripts, event handlers,
+                external links, images or embedded HTML, at most 40 KB. A sketch that breaks the rules
+                is refused (exit 1, nothing written) with the reason.
 
 Locks the transcript, because roundtable_server.py writes the user's messages to it too.
 """
 import datetime
 import json
 import pathlib
+import re
 import sys
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))  # -I leaves the script's folder off sys.path
 from filelock import lock as lock_file, unlock as unlock_file  # noqa: E402
@@ -46,6 +53,42 @@ from filelock import lock as lock_file, unlock as unlock_file  # noqa: E402
 STALE = datetime.timedelta(hours=1)  # a holder silent this long has gone away (a card can wait a while)
 CLAIMED = 3                          # exit status: another session moderates this roundtable
 FLAGGED = 1                          # exit status: --check flagged a turn; nothing was written
+
+SKETCH_MAX = 40_000                  # bytes: a whiteboard sketch, not an illustration
+SKETCH_TAGS = {"svg", "g", "title", "desc", "defs", "filter", "feTurbulence", "feDisplacementMap",
+               "marker", "path", "line", "polyline", "polygon", "rect", "circle", "ellipse", "text", "tspan", "use"}
+
+
+def check_sketch(svg):
+    """Return a reason if the SVG isn't a plain drawing, else None. The page also shows sketches as
+    images (which can't run scripts or load anything), so this is a second, stricter line."""
+    if len(svg.encode("utf-8")) > SKETCH_MAX:
+        return f"too big ({len(svg.encode('utf-8')) // 1000} KB, max {SKETCH_MAX // 1000}): draw fewer, simpler shapes"
+    if re.search(r"<!(DOCTYPE|ENTITY)", svg, re.I):
+        return "no DOCTYPE or ENTITY declarations"
+    try:
+        root = ET.fromstring(svg)
+    except ET.ParseError as e:
+        return f"not well-formed SVG: {e}"
+    for node in root.iter():
+        tag = node.tag.split("}")[-1]
+        if node is root and tag != "svg":
+            return "the sketch must be one <svg> element"
+        if tag not in SKETCH_TAGS:
+            return f"<{tag}> isn't allowed: use shapes, text and the roughening filter only"
+        for name, value in node.attrib.items():
+            attr = name.split("}")[-1].lower()
+            if attr.startswith("on"):
+                return f"event handler {attr} isn't allowed"
+            if attr == "href" and not value.startswith("#"):
+                return "links may only point inside the sketch (#id)"
+            if "url(" in value.replace(" ", "") and not re.fullmatch(r"\s*url\(\s*#[\w-]+\s*\)\s*", value):
+                return f"{attr}: url() may only point inside the sketch (#id)"
+            if re.search(r"javascript:|data:|@import|expression\(", value, re.I):
+                return f"{attr} has a value that isn't allowed"
+    if not any(child.tag.split("}")[-1] == "title" and (child.text or "").strip() for child in root):
+        return "add a <title> saying what the sketch shows (it's the picture's description)"
+    return None
 
 
 def now():
@@ -81,6 +124,13 @@ def main():
         if not raw:
             sys.exit("--turn needs the turn's text on stdin")
         new = [{"type": "turn", "who": argv[argv.index("--turn") + 1], "text": raw}]
+        if "--sketch" in argv:
+            svg = pathlib.Path(argv[argv.index("--sketch") + 1]).read_text(encoding="utf-8-sig").strip()
+            reason = check_sketch(svg)
+            if reason:
+                print(f"Not posted. The sketch was refused: {reason}")
+                sys.exit(FLAGGED)
+            new[0]["sketch"] = svg
     else:
         new = json.loads(raw) if raw else []
         new = new if isinstance(new, list) else [new]
@@ -120,14 +170,19 @@ def main():
                 data.setdefault("items", []).append(obj)
                 if kind == "turn":
                     data.pop("note", None)  # the "getting ready" notice ends when someone speaks
+                    data.pop("drawing", None)
         if "--speaking" in argv:
             who = argv[argv.index("--speaking") + 1]
             data.pop("speaking", None) if who == "none" else data.__setitem__("speaking", who)
+            if "--drawing" in argv and who != "none":
+                data["drawing"] = True   # the page says "<name> is drawing…" instead of typing
+            else:
+                data.pop("drawing", None)
         if "--clear-ask" in argv:
             data.pop("ask", None)
         if "--finish" in argv:
             data["live"] = False
-            for k in ("speaking", "ask", "paused"):
+            for k in ("speaking", "drawing", "ask", "paused"):
                 data.pop(k, None)
         else:
             data.setdefault("live", True)
