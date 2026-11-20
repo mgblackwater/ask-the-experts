@@ -62,6 +62,7 @@ body.served .back{display:block}
 .tool[aria-pressed="true"]{color:var(--accent)}
 .ia{display:none}
 body.interactive .ia{display:inline-block}
+.live{display:none} /* every chat can be continued at any time, so a LIVE/FINISHED badge says little; the element still tracks state */
 .live{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff;background:#e53935}
 .live.done{background:var(--muted)}
 .live.paused{background:#c98a00}
