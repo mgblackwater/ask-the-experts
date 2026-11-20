@@ -1,0 +1,17 @@
+{
+  "name": "ask-the-experts",
+  "owner": {
+    "name": "mgblackwater"
+  },
+  "metadata": {
+    "description": "Ask the Experts: put your question to a table of great minds, and take part yourself"
+  },
+  "plugins": [
+    {
+      "name": "ask-the-experts",
+      "source": "./plugins/ask-the-experts",
+      "description": "Sourced personas of great thinkers that answer, debate each other, and talk with you in a local roundtable app",
+      "version": "0.5.0"
+    }
+  ]
+}

@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roundtable</title>
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e4e2dc;
+  --mod:#efeee9; --ev:#fbf8ef; --ev-line:#e6dcc0; --you:#1d1d1f; --you-ink:#ffffff; --accent:#0f7a75;
+  --c1:#2f5fd0; --c2:#b5591a; --c3:#17845c; --c4:#7d3cc9; --self:#0f7a75;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141416; --panel:#1e1e21; --ink:#ececee; --muted:#9a9aa2; --line:#2e2e33;
+    --mod:#232327; --ev:#22201a; --ev-line:#4a4230; --you:#ececee; --you-ink:#141416; --accent:#4fd1c5;
+    --c1:#7aa2ff; --c2:#f0a066; --c3:#5fd3a3; --c4:#c39bff; --self:#4fd1c5; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141416; --panel:#1e1e21; --ink:#ececee; --muted:#9a9aa2; --line:#2e2e33;
+  --mod:#232327; --ev:#22201a; --ev-line:#4a4230; --you:#ececee; --you-ink:#141416; --accent:#4fd1c5;
+  --c1:#7aa2ff; --c2:#f0a066; --c3:#5fd3a3; --c4:#c39bff; --self:#4fd1c5; --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+.wrap{max-width:780px;margin:0 auto;padding:20px 16px 120px}
+a{color:inherit}
+.home{display:none;font-size:.85rem;color:var(--muted);text-decoration:none;margin-bottom:8px}
+body.interactive .home{display:inline-block}
+.home:hover{color:var(--ink)}
+header h1{font-size:1.5rem;line-height:1.25;margin:0 0 6px;letter-spacing:-.01em}
+header .meta{color:var(--muted);font-size:.9rem}
+.notice{margin:14px 0 16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);font-size:.85rem}
+.cast{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+.chip{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:.85rem}
+.av{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;overflow:hidden;color:#fff;font-weight:650;font-size:.8rem;letter-spacing:.02em}
+.av img{width:100%;height:100%;display:block}
+.chip .av{width:30px;height:30px;font-size:.7rem}
+.controls{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 0;margin-bottom:6px;background:var(--bg);border-bottom:1px solid var(--line)}
+button{font:inherit;font-size:.85rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:disabled{opacity:.5;cursor:default}
+button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ia{display:none}
+body.interactive .ia{display:inline-block}
+.spacer{flex:1}
+.live{font-size:.8rem;font-weight:650;color:#c0392b;padding:4px 8px;border-radius:999px;border:1px solid currentColor}
+.live.done{color:var(--muted)}
+.live.paused{color:#b07d10}
+.round{display:flex;align-items:center;gap:10px;margin:28px 0 12px;color:var(--muted);font-size:.78rem;font-weight:650;text-transform:uppercase;letter-spacing:.08em}
+.round::before,.round::after{content:"";flex:1;height:1px;background:var(--line)}
+.msg{display:flex;gap:10px;margin:12px 0;align-items:flex-start}
+.bubble{background:var(--panel);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:10px 14px;box-shadow:var(--shadow);max-width:100%;min-width:0}
+.who{font-size:.8rem;font-weight:650;margin-bottom:2px}
+.bubble p{margin:.35em 0}
+.bubble .body p:first-child{margin-top:0}.bubble .body p:last-child{margin-bottom:0}
+.msg.you{justify-content:flex-end}
+.msg.you .bubble{background:var(--you);color:var(--you-ink);border-color:var(--you);border-radius:14px 4px 14px 14px}
+.msg.you .who{color:inherit;opacity:.75}
+.mod{margin:14px 0;padding:10px 14px;border-radius:10px;background:var(--mod);font-size:.92rem}
+.mod .tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:2px}
+.ev{margin:14px 0;border:1px solid var(--ev-line);background:var(--ev);border-radius:10px;padding:2px 14px}
+.ev summary{cursor:pointer;padding:10px 0;font-weight:650;font-size:.92rem}
+.ev h4{margin:10px 0 4px;font-size:.88rem}
+.ev ul{margin:0 0 6px;padding-left:18px;font-size:.88rem}
+.ev li{margin:3px 0}
+.ev .bottom{font-size:.86rem;margin:4px 0 12px;color:var(--muted)}
+.typing{display:inline-flex;gap:4px;padding:12px 14px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);opacity:.4;animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{50%{opacity:1}}
+.item{transition:opacity .35s ease, transform .35s ease}
+.item.hidden{display:none}
+.item.enter{opacity:0;transform:translateY(6px)}
+.acts{display:none;gap:14px;margin-top:6px}
+body.interactive .acts{display:flex}
+.acts button{border:none;background:none;padding:0;font-size:.78rem;color:var(--muted)}
+.acts button:hover{color:var(--ink);text-decoration:underline}
+.edited{font-size:.72rem;color:var(--muted);margin-left:6px;font-weight:500}
+.bubble textarea{width:100%;min-height:90px;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+/* question cards */
+.ask{margin:18px 0;border:1.5px solid var(--accent);border-radius:12px;background:var(--panel);padding:12px 14px;box-shadow:var(--shadow)}
+.ask .title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:6px}
+.ask .q{margin:10px 0 4px}
+.ask .qt{font-weight:600;font-size:.95rem;margin-bottom:6px}
+.ask .opts{display:flex;flex-wrap:wrap;gap:8px}
+.ask .opt{display:flex;flex-direction:column;align-items:flex-start;text-align:left;max-width:100%;padding:8px 12px;border-radius:10px}
+.ask .opt strong{font-size:.88rem}
+.ask .opt span{font-size:.78rem;color:var(--muted)}
+.ask .opt.on{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
+.ask .other{width:100%;margin-top:8px;font:inherit;font-size:.88rem;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.ask .row{display:flex;justify-content:flex-end;margin-top:10px}
+.ask .go{background:var(--accent);border-color:var(--accent);color:#fff}
+/* composer */
+.composer{display:none;position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--bg);border-top:1px solid var(--line);padding:10px 16px 14px}
+body.interactive .composer{display:block}
+.composer .inner{max-width:780px;margin:0 auto}
+.composer .to{display:none;align-items:center;gap:6px;font-size:.8rem;color:var(--muted);margin-bottom:6px}
+.composer .to.on{display:flex}
+.composer .to button{padding:0 6px;font-size:.75rem}
+.composer .row{display:flex;gap:8px;align-items:flex-end}
+.composer textarea{flex:1;min-height:44px;max-height:160px;resize:vertical;font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.composer .send{background:var(--ink);color:var(--bg);border-color:var(--ink);padding:9px 16px}
+.composer .hint{font-size:.75rem;color:var(--muted);margin-top:4px}
+footer{margin-top:36px;color:var(--muted);font-size:.8rem}
+@media (prefers-reduced-motion: reduce){.item{transition:none}.typing i{animation:none;opacity:.7}}
+@media (max-width:520px){.av{width:34px;height:34px}.bubble{padding:9px 12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="home" href="./">← All roundtables</a>
+  <header>
+    <h1 id="title"></h1>
+    <div class="meta" id="meta"></div>
+  </header>
+  <div class="notice" id="notice"></div>
+  <div class="cast" id="cast"></div>
+  <div class="controls">
+    <button id="replay" type="button">▶ Replay as chat</button>
+    <button id="speed" type="button" title="Replay speed">1×</button>
+    <button id="all" type="button">Show all</button>
+    <button id="pause" type="button" class="ia">Pause</button>
+    <button id="wrap" type="button" class="ia">Wrap up now</button>
+    <span class="spacer"></span>
+    <button id="theme" type="button" title="Switch light / dark">◐</button>
+  </div>
+  <main id="feed" aria-live="polite"></main>
+  <footer id="foot"></footer>
+</div>
+<div class="composer" id="composer">
+  <div class="inner">
+    <div class="to" id="replyto"><span id="replytext"></span><button type="button" id="replyclear" title="Stop replying">✕</button></div>
+    <div class="row">
+      <textarea id="msg" placeholder="Say something to the table, any time…" aria-label="Your message to the table"></textarea>
+      <button type="button" class="send" id="send">Send</button>
+    </div>
+    <div class="hint" id="hint">The next speaker will respond to you. Ctrl/⌘ + Enter to send.</div>
+  </div>
+</div>
+
+<!-- Filled by scripts/render_roundtable.py -->
+<script type="application/json" id="roundtable-data">{"title": "Why do software projects always run late, and what should we do about it?", "topic": "Roundtable with Daniel Kahneman, Richard Feynman, Andy Grove, Charlie Munger", "date": "2026-11-17", "participants": [{"id": "daniel-kahneman", "name": "Daniel Kahneman", "kind": "thinker", "lens": "Stress-testing judgments, forecasts and decisions. Find where confident intuition outruns ", "avatar": "daniel-kahneman"}, {"id": "richard-feynman", "name": "Richard Feynman", "kind": "thinker", "lens": "Debugging claims, systems and your own understanding. Make it concrete, test it against na", "avatar": "richard-feynman"}, {"id": "andy-grove", "name": "Andy Grove", "kind": "thinker", "lens": "Managing for output and leverage (managers, one-on-ones, meetings, metrics, OKRs), and spo", "avatar": "andy-grove"}, {"id": "charlie-munger", "name": "Charlie Munger", "kind": "thinker", "lens": "Pressure-testing decisions, businesses and incentive schemes. Invert to find how it fails,", "avatar": "charlie-munger"}, {"id": "you", "name": "You", "kind": "user"}], "items": [{"type": "moderator", "label": "The question", "text": "Why do software projects always run late, and what should we do about it?"}, {"type": "moderator", "label": "Before we start", "text": "At the table: Daniel Kahneman, Richard Feynman, Andy Grove and Charlie Munger. All four died before today's software and AI tools existed, so they reason from their own principles, not from experience of modern software projects."}, {"type": "round", "label": "Round 1 · Openings"}, {"type": "turn", "who": "daniel-kahneman", "text": "I should confess I'm a poor advertisement for my own advice: I once helped write a school curriculum we were all quite sure we'd finish quickly, and it took eight years, and nobody ever used it. The trouble is that a schedule is built from the plan, and a plan is a story about things going right, so it feels convincing precisely because it leaves out everything we can't yet see.\n\nThe question nobody likes to ask is the dull one: how long did projects like this take for other teams, before you knew anything special about yours? Start from that answer and adjust only a little, though I notice that even when we know it, we tend to carry on as before. Charlie, I suspect you'll tell me some of these hopeful estimates aren't mistakes at all, that people are rewarded for making them?"}, {"type": "turn", "who": "charlie-munger", "text": "Daniel, you're right, and it's worse than a mistake: the fellow with the honest, long estimate loses the budget to the fellow with the cheerful short one, and by the time the bill comes due the optimist has been promoted. Most of them aren't even lying. They believe it, the same way that surgeon sincerely believed in taking out healthy gall bladders.\n\nSo turn it around: if I wanted to guarantee a late project, I'd reward the rosiest estimate, punish whoever brings bad news, let the wish list grow every week, and throw more bodies at it when it slips. Stop doing those things and you'll beat most of the field without being clever at all. Andy, in your shop, what happened to the manager who walked in with the honest, ugly number?"}, {"type": "turn", "who": "andy-grove", "text": "Charlie, the ugly number got the same treatment as the pretty one, prove it, and the one with real data behind it was supposed to win, no matter whose title was on it. I kept blunt people close so I'd lose the arguments I deserved to lose, though I'll admit my temper didn't always make walking in with bad news feel safe.\n\nBut here's my point: the ship date is the worst thing to watch, because it only tells you about trouble months after the trouble started. Watch a few early signals instead. Take work that's actually finished and tested each week, pair it with the bug count so nobody can game one without the other giving them away, and find the one step everything else is waiting on. Feynman, you never took anyone's word that a thing would work, so how would you catch a slipping project before the calendar does?"}, {"type": "turn", "who": "richard-feynman", "text": "Andy, I'd skip the status meeting, you see. I'd go down to the people actually writing the code, ask each one separately to write on a slip of paper when they really think it'll work, and then put those slips next to the manager's date. At NASA the engineers' written guesses and the managers' weren't even in the same neighborhood, and that gap was the trouble, sitting there in plain sight before anything went wrong.\n\nAnd I'd sharpen your point about finished work a little: when somebody tells you a piece is almost done, that's just a word, okay? Make them run it, right there, on the real thing, because if it doesn't work when you try it, it isn't done, whatever the chart says."}, {"type": "moderator", "label": "Where it stands", "text": "Four causes, one picture. Kahneman: schedules come from hopeful plans, not from how similar projects really went. Munger: optimistic estimates win budgets, so the system rewards them. Grove: the ship date warns you far too late, so watch finished, tested work each week. Feynman: ask the people doing the work privately, and count nothing as done until it runs."}, {"type": "user", "label": "You, replying to Charlie Munger", "text": "Honestly? Whoever promised the earliest date. If I can change only one thing next month, what should it be?", "from": "page"}, {"type": "turn", "who": "charlie-munger", "text": "Well, there's your whole problem: you're paying people for optimism and then acting surprised when you get optimism instead of software. The one change is this: starting next month, every time a piece of work ships, write the promised date next to the real one, and give the credit and the plum assignments to whoever came closest, not whoever promised soonest.\n\nDo that a few times and decent people stop drifting toward cheerful guesses, because cheerful guesses stop paying. \"Never, ever, think about something else when you should be thinking about the power of incentives.\""}, {"type": "round", "label": "Synthesis"}, {"type": "moderator", "label": "The answer", "text": "Projects run late for two reasons that feed each other: estimates come from a hopeful plan instead of how similar work really went, and the people who promise the earliest dates get rewarded for it."}, {"type": "moderator", "label": "What the table would have you do", "text": "1. Start every estimate from how long similar work actually took, then adjust a little (Kahneman).\n\n2. Write the promised date next to the real one, and reward whoever was closest (Munger).\n\n3. Watch finished, tested work each week, not the ship date (Grove).\n\n4. Ask the people building it for their private guess, and count nothing as done until it runs (Feynman)."}]}</script>
+
+<script>
+(function(){
+  var data;
+  try { data = JSON.parse(document.getElementById('roundtable-data').textContent); }
+  catch(e){ data = {title:'Roundtable', participants:[], items:[]}; }
+
+  // ---- people --------------------------------------------------------------
+  var palette = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)'];
+  var people = {}, pi = 0;
+  function addPerson(p){
+    if(!p || !p.id || people[p.id]) return false;
+    p.color = p.kind==='self' ? 'var(--self)' : (p.kind==='thinker' ? palette[(pi++)%palette.length] : 'var(--muted)');
+    p.initials = p.initials || (p.name||'?').split(/\s+/).map(function(w){return w[0]}).join('').slice(0,2).toUpperCase();
+    people[p.id] = p; return true;
+  }
+  (data.participants||[]).forEach(addPerson);
+
+  function el(tag, cls, text){ var n=document.createElement(tag); if(cls) n.className=cls; if(text!=null) n.textContent=text; return n; }
+  function paras(parent, text){ String(text||'').split(/\n{2,}/).forEach(function(t){ if(t.trim()) parent.appendChild(el('p',null,t.trim())); }); }
+  function safeUrl(u){ return /^https?:\/\//i.test(u||'') ? u : null; }
+  function avatar(p){
+    var a=el('div','av',p.initials); a.style.background=p.color; a.setAttribute('aria-hidden','true');
+    if(p.avatar && /^[a-z0-9-]+$/.test(p.avatar)){
+      var img=el('img'); img.alt=''; img.src='avatars/'+p.avatar+'.svg';
+      img.onerror=function(){ img.remove(); a.textContent=p.initials; a.style.background=p.color; };
+      a.textContent=''; a.style.background='transparent'; a.appendChild(img);
+    }
+    return a;
+  }
+
+  document.getElementById('title').textContent = data.title || 'Roundtable';
+  document.title = data.title || 'Roundtable';
+  document.getElementById('meta').textContent = [data.topic, data.date].filter(Boolean).join(' · ');
+  document.getElementById('notice').textContent = data.notice ||
+    'Simulated discussion. Each thinker is an AI agent reasoning from a sourced dossier of their documented thinking, drawn as an illustration, not a likeness. These are not their real words.';
+  document.getElementById('foot').textContent = data.footer || '';
+
+  var cast = document.getElementById('cast');
+  function addChip(p){
+    if(!p || !(p.kind==='thinker'||p.kind==='self')) return;
+    var c=el('span','chip'); c.title = p.lens || ''; c.appendChild(avatar(p)); c.appendChild(el('span',null,p.name));
+    cast.appendChild(c);
+  }
+  (data.participants||[]).forEach(function(p){ addChip(people[p.id]); });
+
+  // ---- feed ----------------------------------------------------------------
+  var feed = document.getElementById('feed'), nodes = [];
+  function build(it, index){
+    var n;
+    if(it.type==='round'){ n=el('div','round',it.label); }
+    else if(it.type==='turn'){
+      var p = people[it.who] || {name:it.who, initials:'?', color:'var(--muted)'};
+      n=el('div','msg'); n.appendChild(avatar(p));
+      var b=el('div','bubble'); var w=el('div','who',p.name); w.style.color=p.color;
+      if(it.edited) w.appendChild(el('span','edited','· your words'));
+      b.appendChild(w);
+      var body=el('div','body'); paras(body,it.text); b.appendChild(body);
+      var acts=el('div','acts');
+      var rb=el('button',null,'Reply'); rb.type='button'; rb.dataset.act='reply'; acts.appendChild(rb);
+      if(p.kind==='self'){ var eb=el('button',null,'Edit what I said'); eb.type='button'; eb.dataset.act='edit'; acts.appendChild(eb); }
+      b.appendChild(acts); n.appendChild(b);
+      n.dataset.who = it.who;
+    }
+    else if(it.type==='user'){
+      n=el('div','msg you'); var b2=el('div','bubble'); b2.appendChild(el('div','who', it.label || 'You'));
+      var body2=el('div','body'); paras(body2,it.text); b2.appendChild(body2); n.appendChild(b2);
+    }
+    else if(it.type==='moderator'){
+      n=el('div','mod'); n.appendChild(el('span','tag', it.label || 'Moderator')); paras(n,it.text);
+    }
+    else if(it.type==='evidence'){
+      n=el('details','ev'); n.open = it.open !== false;
+      n.appendChild(el('summary',null, it.title || 'Evidence'));
+      (it.groups||[]).forEach(function(g){
+        if(g.q) n.appendChild(el('h4',null,g.q));
+        var ul=el('ul');
+        (g.bullets||[]).forEach(function(bl){
+          var li=el('li',null,bl.text); var u=safeUrl(bl.url);
+          if(u){ li.appendChild(document.createTextNode(' ')); var a=el('a',null,'('+(bl.src||'source')+')'); a.href=u; a.target='_blank'; a.rel='noopener'; li.appendChild(a); }
+          ul.appendChild(li);
+        });
+        n.appendChild(ul);
+        if(g.bottom) n.appendChild(el('div','bottom','Bottom line: '+g.bottom));
+      });
+    }
+    if(!n) return null;
+    n.classList.add('item'); n.dataset.type = it.type; n.dataset.len = String((it.text||'').length);
+    if(index!=null) n.dataset.index = String(index);
+    return n;
+  }
+  (data.items||[]).forEach(function(it, i){ var n=build(it, i); if(n){ feed.appendChild(n); nodes.push(n); } });
+
+  // ---- replay ---------------------------------------------------------------
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var speeds=[1,2,4], si=0, timer=null, playing=false, idx=0, typingNode=null;
+  var btnReplay=document.getElementById('replay'), btnSpeed=document.getElementById('speed'), btnAll=document.getElementById('all');
+  function clearTyping(){ if(typingNode){ typingNode.remove(); typingNode=null; } }
+  function showAll(){ idx=nodes.length; stop(); clearTyping(); nodes.forEach(function(n){ n.classList.remove('hidden','enter'); }); }
+  function stop(){ playing=false; clearTimeout(timer); btnReplay.textContent = idx < nodes.length && idx>0 ? '▶ Resume' : '▶ Replay as chat'; btnReplay.setAttribute('aria-pressed','false'); }
+  function reveal(n){
+    n.classList.remove('hidden');
+    if(!reduce){
+      n.classList.add('enter');
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){ n.classList.remove('enter'); }); });
+      setTimeout(function(){ n.classList.remove('enter'); }, 80); // background tabs don't run animation frames
+    }
+    n.scrollIntoView({block:'nearest', behavior: reduce ? 'auto' : 'smooth'});
+  }
+  function step(){
+    if(!playing) return;
+    if(idx >= nodes.length){ stop(); btnReplay.textContent='↺ Replay again'; return; }
+    var n = nodes[idx], sp = speeds[si];
+    if(n.dataset.type==='turn' && !reduce){
+      typingNode = el('div','msg item'); typingNode.appendChild(n.querySelector('.av').cloneNode(true));
+      var t=el('div','bubble typing'); t.appendChild(el('i')); t.appendChild(el('i')); t.appendChild(el('i')); typingNode.appendChild(t);
+      feed.insertBefore(typingNode, n); typingNode.scrollIntoView({block:'nearest',behavior:'smooth'});
+      var think = Math.min(2600, 700 + (+n.dataset.len||0)*2.2) / sp;
+      timer = setTimeout(function(){ clearTyping(); reveal(n); idx++; timer=setTimeout(step, 900/sp); }, think);
+    } else {
+      reveal(n); idx++; timer = setTimeout(step, (n.dataset.type==='round' ? 700 : 1200)/sp);
+    }
+  }
+  btnReplay.addEventListener('click', function(){
+    if(playing){ stop(); return; }
+    if(idx >= nodes.length || idx===0){ nodes.forEach(function(n){ n.classList.add('hidden'); }); idx=0; window.scrollTo({top:0}); }
+    playing=true; btnReplay.textContent='❚❚ Pause'; btnReplay.setAttribute('aria-pressed','true'); step();
+  });
+  btnSpeed.addEventListener('click', function(){ si=(si+1)%speeds.length; btnSpeed.textContent=speeds[si]+'×'; });
+  btnAll.addEventListener('click', showAll);
+  document.getElementById('theme').addEventListener('click', function(){
+    var r=document.documentElement, cur=r.getAttribute('data-theme');
+    var dark = cur ? cur==='dark' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    r.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+  idx = nodes.length;
+
+  // ---- live mode: poll the transcript, take part through roundtable_server.py ----
+  if(!(data.live && /^https?:$/.test(location.protocol))) return;
+  var transcript = String(data.live).split('/').pop();
+  var badge = el('span','live','● Live');
+  document.querySelector('.controls').insertBefore(badge, document.querySelector('.controls .spacer'));
+  var seen = (data.items||[]).length, queue = [], busy = false, speakingNode = null, speakingId = null;
+  var askNode = null, askId = null, paused = !!data.paused, noteNode = null;
+  function renderNote(text){ // a temporary notice such as "Claude is briefing the table…"
+    if(!text){ if(noteNode){ noteNode.remove(); noteNode = null; } return; }
+    if(!noteNode){ noteNode = el('div','mod item'); noteNode.appendChild(el('span','tag','Getting ready')); noteNode.appendChild(el('p')); tail(noteNode); }
+    noteNode.querySelector('p').textContent = text;
+  }
+  var msg = document.getElementById('msg'), sendBtn = document.getElementById('send');
+  var replyBox = document.getElementById('replyto'), replyText = document.getElementById('replytext'), hint = document.getElementById('hint');
+  var btnPause = document.getElementById('pause'), btnWrap = document.getElementById('wrap');
+  var replyTo = null;
+
+  function post(url, body){
+    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error || 'failed'); return j; }); });
+  }
+  function tail(n){ // keep the question card last
+    if(askNode && askNode.parentNode) feed.insertBefore(n, askNode); else feed.appendChild(n);
+  }
+  function setSpeaking(id){
+    if(id === speakingId) return;
+    if(speakingNode){ speakingNode.remove(); speakingNode = null; }
+    speakingId = id || null;
+    var p = speakingId && people[speakingId];
+    if(!p) return;
+    speakingNode = el('div','msg item'); speakingNode.appendChild(avatar(p));
+    var t=el('div','bubble typing'); t.title = p.name + ' is speaking'; t.appendChild(el('i')); t.appendChild(el('i')); t.appendChild(el('i'));
+    speakingNode.appendChild(t); tail(speakingNode);
+    speakingNode.scrollIntoView({block:'nearest', behavior: reduce ? 'auto' : 'smooth'});
+  }
+  function drain(){
+    if(busy || !queue.length) return;
+    busy = true;
+    var n = queue.shift();
+    if(speakingNode && n.dataset.type==='turn'){ speakingNode.remove(); speakingNode=null; speakingId=null; }
+    n.classList.add('hidden'); tail(n); nodes.push(n); idx = nodes.length;
+    reveal(n);
+    setTimeout(function(){ busy = false; drain(); }, reduce ? 0 : 500);
+  }
+  function setPaused(p){
+    paused = !!p;
+    btnPause.textContent = paused ? 'Resume' : 'Pause';
+    if(!badge.classList.contains('done')){ badge.textContent = paused ? '❚❚ Paused' : '● Live'; badge.classList.toggle('paused', paused); }
+  }
+  function renderAsk(ask){
+    if(!ask){ if(askNode){ askNode.remove(); askNode=null; askId=null; } return; }
+    if(ask.id === askId) return;
+    if(askNode) askNode.remove();
+    askId = ask.id; askNode = el('div','ask item');
+    askNode.appendChild(el('div','title', ask.title || 'Your turn to steer'));
+    var state = {};
+    (ask.questions||[]).forEach(function(q){
+      var box=el('div','q'); box.appendChild(el('div','qt', q.q));
+      var opts=el('div','opts'); state[q.id] = {choices:[], other:''};
+      (q.options||[]).forEach(function(o){
+        var b=el('button','opt'); b.type='button'; b.appendChild(el('strong',null,o.label)); if(o.desc) b.appendChild(el('span',null,o.desc));
+        b.addEventListener('click', function(){
+          var c = state[q.id].choices, i = c.indexOf(o.label);
+          if(q.multi){ if(i<0) c.push(o.label); else c.splice(i,1); }
+          else { state[q.id].choices = i<0 ? [o.label] : []; Array.prototype.forEach.call(opts.children, function(x){ x.classList.remove('on'); }); }
+          b.classList.toggle('on', state[q.id].choices.indexOf(o.label) >= 0);
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts);
+      var other=el('input','other'); other.placeholder = 'Or type your own answer…';
+      other.addEventListener('input', function(){ state[q.id].other = other.value; });
+      box.appendChild(other); askNode.appendChild(box);
+    });
+    var row=el('div','row'), go=el('button','go','Send'); go.type='button'; row.appendChild(go); askNode.appendChild(row);
+    go.addEventListener('click', function(){
+      go.disabled = true;
+      var answers = Object.keys(state).map(function(k){ return {qid:k, choices:state[k].choices, other:state[k].other}; });
+      post('api/answer', {transcript: transcript, askId: ask.id, answers: answers})
+        .then(function(){ if(askNode){ askNode.remove(); askNode=null; } poll(); })
+        .catch(function(e){ go.disabled=false; hint.textContent = 'Could not send: ' + e.message; });
+    });
+    feed.appendChild(askNode); askNode.scrollIntoView({block:'nearest', behavior: reduce ? 'auto' : 'smooth'});
+  }
+  function poll(){
+    fetch(transcript + '?t=' + Date.now(), {cache:'no-store'})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(!d) return;
+        (d.participants||[]).forEach(function(p){ if(addPerson(p)) addChip(people[p.id]); });
+        var items = d.items || [];
+        for(; seen < items.length; seen++){ var n = build(items[seen], seen); if(n) queue.push(n); }
+        drain();
+        if(!queue.length) setSpeaking(d.speaking);
+        renderNote(d.note);
+        renderAsk(d.ask);
+        setPaused(d.paused);
+        if(d.topic) document.getElementById('meta').textContent = [d.topic, d.date].filter(Boolean).join(' · ');
+        if(d.footer != null) document.getElementById('foot').textContent = d.footer;
+        if(!d.live){ badge.textContent = 'Finished'; badge.className = 'live done'; setSpeaking(null); renderAsk(null); clearInterval(timerPoll); document.body.classList.remove('interactive'); }
+      })
+      .catch(function(){});
+  }
+  var timerPoll = setInterval(poll, 3000); poll();
+
+  // The message box, Reply, Edit, Pause and Wrap only appear when roundtable_server.py answers.
+  fetch('api/ping', {cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    if(j && j.ok) document.body.classList.add('interactive');
+  }).catch(function(){});
+  setPaused(paused);
+  function setReply(i, name){ replyTo = i; replyBox.classList.toggle('on', i != null); replyText.textContent = i != null ? 'Replying to ' + name : ''; }
+  document.getElementById('replyclear').addEventListener('click', function(){ setReply(null); });
+  function send(){
+    var text = msg.value.trim(); if(!text) return;
+    sendBtn.disabled = true;
+    post('api/say', {transcript: transcript, text: text, replyTo: replyTo})
+      .then(function(){ msg.value=''; setReply(null); hint.textContent='Sent. The next speaker will respond to you.'; poll(); })
+      .catch(function(e){ hint.textContent='Could not send: ' + e.message; })
+      .then(function(){ sendBtn.disabled = false; });
+  }
+  sendBtn.addEventListener('click', send);
+  msg.addEventListener('keydown', function(e){ if(e.key==='Enter' && (e.metaKey||e.ctrlKey)){ e.preventDefault(); send(); } });
+  btnPause.addEventListener('click', function(){ post('api/control', {transcript: transcript, action: paused ? 'resume' : 'pause'}).then(poll).catch(function(e){ hint.textContent = e.message; }); });
+  btnWrap.addEventListener('click', function(){ post('api/control', {transcript: transcript, action: 'wrap'}).then(poll).catch(function(e){ hint.textContent = e.message; }); });
+  feed.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-act]'); if(!btn) return;
+    var node = btn.closest('.item'), i = +node.dataset.index, p = people[node.dataset.who] || {name:'them'};
+    if(btn.dataset.act==='reply'){ setReply(i, p.name); msg.focus(); return; }
+    var bubble = node.querySelector('.bubble'), body = bubble.querySelector('.body'), acts = bubble.querySelector('.acts');
+    if(bubble.querySelector('textarea')) return;
+    var ta = el('textarea'); ta.value = Array.prototype.map.call(body.querySelectorAll('p'), function(x){ return x.textContent; }).join('\n\n');
+    var row = el('div','acts'); row.style.display='flex';
+    var save = el('button',null,'Save my words'), cancel = el('button',null,'Cancel'); save.type='button'; cancel.type='button';
+    row.appendChild(save); row.appendChild(cancel);
+    body.style.display='none'; acts.style.display='none';
+    bubble.insertBefore(ta, acts); bubble.insertBefore(row, acts); ta.focus();
+    function close(){ ta.remove(); row.remove(); body.style.display=''; acts.style.display=''; }
+    cancel.addEventListener('click', close);
+    save.addEventListener('click', function(){
+      var text = ta.value.trim(); if(!text) return;
+      save.disabled = true;
+      post('api/edit', {transcript: transcript, index: i, text: text}).then(function(){
+        body.textContent=''; paras(body, text);
+        var who = bubble.querySelector('.who'); if(!who.querySelector('.edited')) who.appendChild(el('span','edited','· your words'));
+        close(); hint.textContent='Saved. The table will carry on from your words.';
+      }).catch(function(e){ save.disabled=false; hint.textContent='Could not save: ' + e.message; });
+    });
+  });
+})();
+</script>
+</body>
+</html>

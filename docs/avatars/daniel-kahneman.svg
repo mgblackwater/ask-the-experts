@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Drawn avatar for daniel-kahneman (an illustration, not a likeness)">
+<defs>
+<clipPath id="c"><circle cx="48" cy="48" r="48"/></clipPath>
+<radialGradient id="bg" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#f4efe8"/><stop offset="1" stop-color="#e0d8cf"/></radialGradient>
+<radialGradient id="skin" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#ecd0b8"/><stop offset=".65" stop-color="#e8c6a8"/><stop offset="1" stop-color="#c3a68d"/></radialGradient>
+<linearGradient id="cloth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a8075"/><stop offset="1" stop-color="#554e45"/></linearGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eceae6"/><stop offset="1" stop-color="#acaaa6"/></linearGradient>
+</defs>
+<g clip-path="url(#c)">
+<rect width="96" height="96" fill="url(#bg)"/>
+<g transform="translate(48 50) scale(1.12) translate(-48 -50)">
+<rect x="41.5" y="48" width="13" height="15" rx="4" fill="#ccae94"/>
+<ellipse cx="48" cy="56" rx="7" ry="3" fill="#000" fill-opacity=".12"/>
+<path d="M4 100 C4 74 23 60 48 60 C73 60 92 74 92 100 Z" fill="url(#cloth)"/><path d="M39 60 L48 82 L57 60 Z" fill="#f4f3ef"/><path d="M39 60 L45.5 78 L40 81 L33 63 Z M57 60 L50.5 78 L56 81 L63 63 Z" fill="#857b6f"/>
+<ellipse cx="33.4" cy="38" rx="3" ry="4.6" fill="#ccae94"/><ellipse cx="62.6" cy="38" rx="3" ry="4.6" fill="#ccae94"/><ellipse cx="48" cy="35.5" rx="15" ry="18" fill="url(#skin)"/><path d="M39.5 32.6 Q43 30.8 46 32.2" fill="none" stroke="#cfcac2" stroke-width="1.5" stroke-linecap="round"/><path d="M50 32.2 Q53 30.8 56.5 32.6" fill="none" stroke="#cfcac2" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="42.8" cy="36.6" rx="2.5" ry="1.65" fill="#fbfaf8"/><ellipse cx="53.2" cy="36.6" rx="2.5" ry="1.65" fill="#fbfaf8"/><circle cx="42.9" cy="36.7" r="1.25" fill="#3b2f2a"/><circle cx="53.3" cy="36.7" r="1.25" fill="#3b2f2a"/><circle cx="43.3" cy="36.3" r=".4" fill="#fff"/><circle cx="53.7" cy="36.3" r=".4" fill="#fff"/><path d="M48.2 37.5 C47.2 40.5 46.4 42.5 47.2 43.6 C48 44.2 49.3 44 50 43.4" fill="none" stroke="#a78f79" stroke-width="1" stroke-linecap="round"/><path d="M44.2 47.4 Q48 49.6 51.8 47.4" fill="none" stroke="#8b7765" stroke-width="1.15" stroke-linecap="round"/><ellipse cx="39.5" cy="43" rx="2.6" ry="1.5" fill="#e07a6a" fill-opacity=".14"/><ellipse cx="56.5" cy="43" rx="2.6" ry="1.5" fill="#e07a6a" fill-opacity=".14"/>
+
+<path d="M32.5 34 C31.5 24 36 17.5 42 16.2 C40.5 19 40 22 41 24.5 C37 26 34 29.5 32.5 34 Z M63.5 34 C64.5 24 60 17.5 54 16.2 C55.5 19 56 22 55 24.5 C59 26 62 29.5 63.5 34 Z" fill="url(#hair)"/>
+<g fill="#ffffff" fill-opacity=".12" stroke="#4a4038" stroke-width="1.2"><rect x="38.4" y="33.168" width="8.8" height="6.864000000000001" rx="1.4"/><rect x="48.800000000000004" y="33.168" width="8.8" height="6.864000000000001" rx="1.4"/></g><path d="M47.199999999999996 36.4 Q48 35 48.800000000000004 36.4 M38.4 36 L33.6 35 M57.6 36 L62.4 35" fill="none" stroke="#4a4038" stroke-width="1.2"/>
+<g transform="translate(58 70)"><path d="M0 4 a4 4 0 0 1 4 -4 h10 a4 4 0 0 1 4 4 v6 a4 4 0 0 1 -4 4 h-7 l-4 3 v-3 a4 4 0 0 1 -3 -4 Z" fill="#f4f4f2"/><text x="9" y="11" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="#7a6f62">?</text></g>
+</g>
+</g>
+</svg>

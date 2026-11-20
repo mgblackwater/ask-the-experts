@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Drawn avatar for on-call-sre (an illustration, not a likeness)">
+<defs>
+<clipPath id="c"><circle cx="48" cy="48" r="48"/></clipPath>
+<radialGradient id="bg" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#f3ede8"/><stop offset="1" stop-color="#ded6cf"/></radialGradient>
+<radialGradient id="skin" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#b78f75"/><stop offset=".65" stop-color="#a77657"/><stop offset="1" stop-color="#8c6349"/></radialGradient>
+<linearGradient id="cloth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#506176"/><stop offset="1" stop-color="#273445"/></linearGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#575554"/><stop offset="1" stop-color="#171514"/></linearGradient>
+</defs>
+<g clip-path="url(#c)">
+<rect width="96" height="96" fill="url(#bg)"/>
+<g transform="translate(48 50) scale(1.12) translate(-48 -50)">
+<rect x="41.5" y="48" width="13" height="15" rx="4" fill="#93684d"/>
+<ellipse cx="48" cy="56" rx="7" ry="3" fill="#000" fill-opacity=".12"/>
+<path d="M4 100 C4 74 23 60 48 60 C73 60 92 74 92 100 Z" fill="url(#cloth)"/><path d="M39.5 60.5 Q48 68 56.5 60.5" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="1.6"/>
+<ellipse cx="33.4" cy="38" rx="3" ry="4.6" fill="#93684d"/><ellipse cx="62.6" cy="38" rx="3" ry="4.6" fill="#93684d"/><ellipse cx="48" cy="35.5" rx="15" ry="18" fill="url(#skin)"/><path d="M39.5 32.6 Q43 30.8 46 32.2" fill="none" stroke="#1d1a19" stroke-width="1.5" stroke-linecap="round"/><path d="M50 32.2 Q53 30.8 56.5 32.6" fill="none" stroke="#1d1a19" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="42.8" cy="36.6" rx="2.5" ry="1.65" fill="#fbfaf8"/><ellipse cx="53.2" cy="36.6" rx="2.5" ry="1.65" fill="#fbfaf8"/><circle cx="42.9" cy="36.7" r="1.25" fill="#3b2f2a"/><circle cx="53.3" cy="36.7" r="1.25" fill="#3b2f2a"/><circle cx="43.3" cy="36.3" r=".4" fill="#fff"/><circle cx="53.7" cy="36.3" r=".4" fill="#fff"/><path d="M48.2 37.5 C47.2 40.5 46.4 42.5 47.2 43.6 C48 44.2 49.3 44 50 43.4" fill="none" stroke="#78553f" stroke-width="1" stroke-linecap="round"/><path d="M44.2 47.4 Q48 49.6 51.8 47.4" fill="none" stroke="#644734" stroke-width="1.15" stroke-linecap="round"/><ellipse cx="39.5" cy="43" rx="2.6" ry="1.5" fill="#e07a6a" fill-opacity=".14"/><ellipse cx="56.5" cy="43" rx="2.6" ry="1.5" fill="#e07a6a" fill-opacity=".14"/>
+
+<path d="M31.5 35 C28.5 22 34 13 44 12.5 C47 11 52 11.5 55 13 C63 15 67.5 22 64.5 35 C63 29 60 24 55.5 23 C52 21.5 46 21.5 42 23 C36 24.5 33 29 31.5 35 Z" fill="url(#hair)"/>
+
+<g transform="translate(58 72)"><rect width="18" height="13" rx="2.5" fill="#2f3338"/><rect x="2.5" y="2.5" width="13" height="5" rx="1" fill="#9fd3a8"/><path d="M4 5 L6 3.5 L8 6 L10 3.5 L12 5.5 L14 4.5" fill="none" stroke="#2f3338" stroke-width=".9"/><circle cx="5" cy="10.3" r="1" fill="#e2574c"/></g>
+</g>
+</g>
+</svg>
