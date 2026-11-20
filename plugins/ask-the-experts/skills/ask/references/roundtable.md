@@ -97,7 +97,7 @@ Offer the aim as a question on the first checkpoint card when it was never chose
 3. **Don't block on the card.** The user may type instead of clicking. A `say` event counts as their steer: carry on with a next round that answers it.
 4. **Closings,** one at a time: where each has landed, and the one thing they'd tell <user> to do.
 5. **Synthesis,** as moderator items, shaped by the aim's "Ending" column: "The answer" (for `decide`, the decision; for `truth`, what survived the evidence; for `explore`, the map of angles), "What changed during the discussion", "What didn't change", "What the table would have you do, in order", "Notes" (extrapolation, blind spots that showed).
-6. **Finish:** `roundtable_log.py <file>.json --claim <your id> --finish`, then render once more without `--live`. The saved page then works anywhere as a static file with replay. If `chat_history` is `git`, commit the home folder ("Finished: <title>").
+6. **Finish:** `roundtable_log.py <file>.json --claim <your id> --finish`, then render once more without `--live`. The saved page then works anywhere as a static file with replay. If `chat_history` is `git` or `git-sync`, run `home_sync.py commit "Finished: <title>"`.
 
 ## Attachments
 
